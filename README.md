@@ -1,7 +1,8 @@
 # easy-web-midi-sequencer-template
 
 # Demo
-[Demo](https://cat2151.github.io/easy-web-midi-sequencer-template/)
+- [Demo](https://cat2151.github.io/easy-web-midi-sequencer-template/)
+- 音を鳴らすには、Usageを参照ください
 
 # Features
 - webpageを開くだけでMIDI楽器を鳴らせます
@@ -15,12 +16,13 @@
     - Chromeで動作確認しています
 
 # Usage
-- `loopMIDI`のinstallと、port設定
-    - 記載は割愛します
+- [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html)のinstallと、port設定
+    - portは一つ `+` ボタンで登録すれば十分です。
+    - うまくいかない場合はOS再起動もお試しください。
 - `MIDI楽器`の接続
     - [Shared Piano](https://musiclab.chromeexperiments.com/Shared-Piano/) など、`Web MIDI` を受信できるアプリを開いておきます
 - 演奏
-    - あとは当アプリを開くだけで演奏されます
+    - あとは[当アプリ](https://cat2151.github.io/easy-web-midi-sequencer-template/)を開くだけで演奏されます
 
 # Installation
 - `clone`のちソースを開いて`Live Server`を立ち上げる等で、すぐ改造できます
