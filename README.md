@@ -51,6 +51,9 @@
     - 自動設定
         - 例えば当アプリを `seq_out` という識別子で識別として、それを含むportをデフォルトで設定する
 
+## Experimental
+- [Demo Experimental 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental/)
+
 ## 当projectが目指すこと
 - `MIDI OUT` する
 - webpageを開くだけで演奏開始する
