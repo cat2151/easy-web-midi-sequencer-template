@@ -56,7 +56,7 @@
 - Web MIDI API未実装の環境によっては、postmate実行がされない等の不具合が発生します。それの確認用など。
 
 ## Experimental2
-- [Demo Experimental2 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental/)
+- [Demo Experimental2 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental2/)
 - Postmate + Tone.js という組み合わせで鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
 
 ## 当projectが目指すこと
