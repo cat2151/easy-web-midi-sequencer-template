@@ -1,4 +1,4 @@
 import { initSynthSaw } from "./saw.js";
 initSynthSaw(postmateMidi);
 
-postmateMidi.registerChild();
+postmateMidi.registerChild('textarea');

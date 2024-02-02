@@ -1,6 +1,6 @@
 const postmateMidi = {};
 
-postmateMidi.registerParent = function(url) {
+postmateMidi.registerParent = function(url, textareaId) {
   const handshake = new Postmate({
     url
   });
@@ -27,17 +27,19 @@ postmateMidi.registerParent = function(url) {
     });
 
     // childとの双方向通信のtest用
-    let textarea = document.querySelector("#textarea");
-    textarea.addEventListener("input", onChangeTextarea);
-    function onChangeTextarea() {
-      console.log(`parent : onChangeTextarea : call data : [${textarea.value}]`);
-      child.call('onChangeParent', textarea.value);
-      child.call('onmidimessage', textarea.value);
+    if (textareaId) {
+      const textarea = document.querySelector("#" + textareaId);
+      textarea.addEventListener("input", onChangeTextarea);
+      function onChangeTextarea() {
+        console.log(`parent : onChangeTextarea : call data : [${textarea.value}]`);
+        child.call('onChangeParent', textarea.value);
+        child.call('onmidimessage', textarea.value);
+      }
     }
   });
 }
 
-postmateMidi.registerChild = function() {
+postmateMidi.registerChild = function(textareaId) {
   const handshake = new Postmate.Model({
     // Expose your model to the Parent. Property values may be functions, promises, or regular values
     height: () => document.height || document.body.offsetHeight,
@@ -50,16 +52,17 @@ postmateMidi.registerChild = function() {
     console.log('child : handshake is complete');
     parent.emit('onCompleteHandshakeChild', '"Hello, World!" by child');
 
-    textarea.addEventListener("input", onChangeTextarea);
-    function onChangeTextarea() {
-      console.log(`child : onChangeTextarea : emit data : [${textarea.value}]`);
-      parent.emit('onChangeChild', textarea.value);
-      parent.emit('onmidimessage', textarea.value);
+    // parentとの双方向通信のtest用
+    if (textareaId) {
+      const textarea = document.querySelector("#" + textareaId);
+      textarea.addEventListener("input", onChangeTextarea);
+      function onChangeTextarea() {
+        console.log(`child : onChangeTextarea : emit data : [${textarea.value}]`);
+        parent.emit('onChangeChild', textarea.value);
+        parent.emit('onmidimessage', textarea.value);
+      }
     }
   });
-
-  // parentとの双方向通信のtest用
-  const textarea = document.querySelector("#textarea");
 
   // parentからcallされる
   function onCompleteHandshakeParent(data) {
@@ -80,8 +83,8 @@ postmateMidi.onMidiMessage = function (event) {
   switch (event[0]) {
   // note on
   case 0x90:
-    postmateMidi.noteOff();
     postmateMidi.noteOn(event[1]);
+    setTimeout(postmateMidi.noteOff, 500/*msec*/);
     break;
   }
 };
@@ -90,8 +93,8 @@ postmateMidi.registerTonejsStarter = function() {
   const button = document.querySelector('button');
   button.onclick = function() {
     postmateMidi.initTonejsByUserAction();
-    postmateMidi.noteOff();
     postmateMidi.noteOn(/*noteNum = */60); // playボタンを押した場合は常に鳴らす。「鳴る」ということをわかりやすくすることを優先する
+    setTimeout(postmateMidi.noteOff, 500/*msec*/);
   };
 }
 postmateMidi.initTonejsByUserAction = function() {
@@ -105,9 +108,10 @@ postmateMidi.initTonejsByUserAction = function() {
 }
 postmateMidi.noteOn = function(noteNum) {
   postmateMidi.initTonejsByUserAction();
-  postmateMidi.synth.triggerAttackRelease(Tone.Midi(noteNum).toFrequency(), "8n");
+  postmateMidi.synth.triggerAttack(Tone.Midi(noteNum).toFrequency());
 }
 postmateMidi.noteOff = function() {
+  postmateMidi.synth.triggerRelease();
 }
 
 postmateMidi.registerTonejsStarter();

@@ -1,4 +1,4 @@
-// 取り急ぎtest用に、コピー元から変更した。詳しくはコピー元とのdiffを参照のこと。
+// import * as Tone from 'tone'; // コメントアウトする。index.htmlでTone.jsをsrcする。そうしないとバンドラーを使わない別projectにおいてソースをそのまま利用できず不便だったので。
 
 function initSynthSaw(s) {
   const synth = new Tone.Synth({oscillator: {type: 'sawtooth'}});
@@ -25,7 +25,7 @@ function initSynthSaw(s) {
     freqEnv.set({baseFrequency: Tone.Midi(20 + Math.random() * 40).toFrequency()});
     freqEnv.triggerAttack();
 
-    synth.triggerAttackRelease(Tone.Midi(noteNum).toFrequency(), "8n");
+    synth.triggerAttack(Tone.Midi(noteNum).toFrequency());
     s.isNoteOn = true;
   };
 
