@@ -88,10 +88,9 @@ postmateMidi.onMidiMessage = function (event) {
   // console.log(event);
   switch (event[0]) {
   // note on
-  case 0x90:
-    postmateMidi.noteOn(event[1]);
-    setTimeout(postmateMidi.noteOff, 500/*msec*/);
-    break;
+  case 0x90: postmateMidi.noteOn(event[1]); break;
+  // note off
+  case 0x80: postmateMidi.noteOff(event[1]); break;
   }
 };
 
@@ -99,14 +98,7 @@ postmateMidi.registerTonejsStarter = function() {
   const button = document.querySelector('button');
   button.onclick = function() {
     postmateMidi.initTonejsByUserAction();
-    postmateMidi.isPlayingSeq = !postmateMidi.isPlayingSeq;
-    if (postmateMidi.isPlayingSeq) {
-      postmateMidi.seqStepTime = postmateMidi.calcStepTimeMsec(500, 64);
-      postmateMidi.seqBaseTime = performance.now();
-      postmateMidi.seqPlayTime = 0;
-      console.log();
-    }
-    postmateMidi.playSeq();
+    postmateMidi.seq.togglePlay();
   };
 }
 postmateMidi.initTonejsByUserAction = function() {
@@ -117,42 +109,6 @@ postmateMidi.initTonejsByUserAction = function() {
     await Tone.start();
   }
   postmateMidi.synth = new Tone.Synth().toDestination();
-}
-postmateMidi.playSeq = function() {
-  if (postmateMidi.isPlayingSeq) {
-    postmateMidi.sendNoteOn(/*noteNum = */60 + Math.random() * 12); // playボタンを押した場合は常に鳴らす。「鳴る」ということをわかりやすくすることを優先する
-    const time = postmateMidi.calcSeqNextTime(postmateMidi.seqStepTime);
-    setTimeout(postmateMidi.sendNoteOff, time * 0.9);
-    setTimeout(postmateMidi.playSeq, time);
-  } else {
-    postmateMidi.noteOff();
-  }
-}
-postmateMidi.sendNoteOn = (noteNum) => {
-  // postmateMidi.noteOn(noteNum);
-  const event = new Uint8Array([0x90, noteNum, 127]);
-  if (postmateMidi.child) {
-    postmateMidi.child.call('onmidimessage', event);
-    return;
-  }
-  if (postmateMidi.parent) {
-    postmateMidi.parent.emit('onmidimessage', event);
-    return;
-  }
-}
-postmateMidi.sendNoteOff = (noteNum) => {
-  postmateMidi.noteOff(noteNum);
-}
-postmateMidi.calcSeqNextTime = function(stepTime) {
-  const real = performance.now() - postmateMidi.seqBaseTime;
-  const diff = real - postmateMidi.seqPlayTime;
-  const time = stepTime - diff;
-  // console.log({diff: Math.floor(diff), time: Math.floor(time)});
-  postmateMidi.seqPlayTime += stepTime;
-  return time;
-}
-postmateMidi.calcStepTimeMsec = function(bpm, beatnote) {
-    return 1000 * 60 * 4 / bpm / beatnote;
 }
 postmateMidi.noteOn = function(noteNum) {
   postmateMidi.initTonejsByUserAction();
