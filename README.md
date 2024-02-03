@@ -78,6 +78,11 @@
 - Postmate + Tone.js + 疑似midimessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
 - 和音を鳴らせるようにしました。
 
+## Experimental7
+- [Demo Experimental7 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental7/)
+- Postmate + Tone.js + 疑似midimessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
+- 簡易的な曲データをJSONで入力できるようにしました。
+
 ## 当projectが目指すこと
 - `MIDI OUT` する
 - webpageを開くだけで演奏開始する
