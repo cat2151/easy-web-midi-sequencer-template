@@ -66,6 +66,12 @@
 ## Experimental4
 - [Demo Experimental4 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental4/)
 - Postmate + Tone.js + 疑似midimessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
+- Experimental5の土台用。seq部分のみの実装。
+
+## Experimental5
+- [Demo Experimental5 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental5/)
+- Postmate + Tone.js + 疑似midimessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
+- Experimental4を土台に、実際に擬似midimessage送受信を実装。
 
 ## 当projectが目指すこと
 - `MIDI OUT` する
