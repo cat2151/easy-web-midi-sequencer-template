@@ -23,7 +23,6 @@ postmateMidi.registerParent = function(url, textareaId) {
     });
     child.on('onmidimessage', data => {
       // console.log(`parent : onmidimessage : received data : [${data}]`);
-      // postmateMidi.onMidiMessage(new Uint8Array([0x90, 48 - (data.length % 2) * 12, 127]));
       postmateMidi.onMidiMessage(data);
     });
 
@@ -34,7 +33,8 @@ postmateMidi.registerParent = function(url, textareaId) {
       function onChangeTextarea() {
         console.log(`parent : onChangeTextarea : call data : [${textarea.value}]`);
         child.call('onChangeParent', textarea.value);
-        child.call('onmidimessage', new Uint8Array([0x90, 48 - (textarea.value.length % 2) * 12, 127]));
+        postmateMidi.seq.init();
+        postmateMidi.seq.playStep();
       }
     }
 
@@ -62,7 +62,8 @@ postmateMidi.registerChild = function(textareaId) {
       function onChangeTextarea() {
         console.log(`child : onChangeTextarea : emit data : [${textarea.value}]`);
         parent.emit('onChangeChild', textarea.value);
-        parent.emit('onmidimessage', new Uint8Array([0x90, 48 - (textarea.value.length % 2) * 12, 127]));
+        postmateMidi.seq.init();
+        postmateMidi.seq.playStep();
       }
     }
 
@@ -79,8 +80,18 @@ postmateMidi.registerChild = function(textareaId) {
   }
   function onmidimessage(data) {
     // console.log(`child : onmidimessage : received data : [${data}]`);
-    // postmateMidi.onMidiMessage(new Uint8Array([0x90, 64 + (data.length % 2) * 7, 127]));
     postmateMidi.onMidiMessage(data);
+  }
+}
+
+postmateMidi.sendMidiMessage = (event) => {
+  if (postmateMidi.child) {
+    postmateMidi.child.call('onmidimessage', event);
+    return;
+  }
+  if (postmateMidi.parent) {
+    postmateMidi.parent.emit('onmidimessage', event);
+    return;
   }
 }
 
@@ -118,4 +129,4 @@ postmateMidi.noteOff = function(noteNum) {
   postmateMidi.synth.triggerRelease(Tone.Midi(noteNum).toFrequency());
 }
 
-postmateMidi.registerTonejsStarter();
+export { postmateMidi };
