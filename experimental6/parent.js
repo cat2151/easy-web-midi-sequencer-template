@@ -1,10 +1,8 @@
 import { postmateMidi } from "./postmate-midi.js";
-postmateMidi.registerTonejsStarter();
-postmateMidi.registerParent(/*child=*/'./child.html', 'textarea');
-
 import { seq } from "./seq.js";
-postmateMidi.seq = seq;
-postmateMidi.seq.sendMidiMessage = postmateMidi.sendMidiMessage;
+postmateMidi.registerParent(/*child=*/'./child.html', '#textarea', seq.initAndPlayStep);
+postmateMidi.registerSeq(seq);
+postmateMidi.registerTonejsStarter('button', seq.togglePlay);
 
 import { initSynthPoly } from "./poly.js";
-initSynthPoly(postmateMidi);
+// initSynthPoly(postmateMidi);

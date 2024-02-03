@@ -19,4 +19,4 @@ function initSynthPoly(s) {
   };
 }
 
-export { initSynthPoly as initSynthPoly };
+export { initSynthPoly };

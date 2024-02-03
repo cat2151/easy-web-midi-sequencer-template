@@ -1,6 +1,7 @@
+// usage : parent.js / child.js を参照ください
 const postmateMidi = {};
 
-postmateMidi.registerParent = function(url, textareaId) {
+postmateMidi.registerParent = function(url, textareaSelector, textareaSeqFnc) {
   const handshake = new Postmate({
     url
   });
@@ -27,14 +28,16 @@ postmateMidi.registerParent = function(url, textareaId) {
     });
 
     // childとの双方向通信のtest用
-    if (textareaId) {
-      const textarea = document.querySelector("#" + textareaId);
+    if (textareaSelector) {
+      const textarea = document.querySelector(textareaSelector);
       textarea.addEventListener("input", onChangeTextarea);
       function onChangeTextarea() {
-        console.log(`parent : onChangeTextarea : call data : [${textarea.value}]`);
-        child.call('onChangeParent', textarea.value);
-        postmateMidi.seq.init();
-        postmateMidi.seq.playStep();
+        if (textareaSeqFnc) {
+          textareaSeqFnc(textarea.value);
+        } else {
+          console.log(`parent : onChangeTextarea : call data : [${textarea.value}]`);
+          child.call('onChangeParent', textarea.value);
+        }
       }
     }
 
@@ -42,7 +45,7 @@ postmateMidi.registerParent = function(url, textareaId) {
   });
 }
 
-postmateMidi.registerChild = function(textareaId) {
+postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc) {
   const handshake = new Postmate.Model({
     // Expose your model to the Parent. Property values may be functions, promises, or regular values
     height: () => document.height || document.body.offsetHeight,
@@ -56,14 +59,16 @@ postmateMidi.registerChild = function(textareaId) {
     parent.emit('onCompleteHandshakeChild', '"Hello, World!" by child');
 
     // parentとの双方向通信のtest用
-    if (textareaId) {
-      const textarea = document.querySelector("#" + textareaId);
+    if (textareaSelector) {
+      const textarea = document.querySelector(textareaSelector);
       textarea.addEventListener("input", onChangeTextarea);
       function onChangeTextarea() {
-        console.log(`child : onChangeTextarea : emit data : [${textarea.value}]`);
-        parent.emit('onChangeChild', textarea.value);
-        postmateMidi.seq.init();
-        postmateMidi.seq.playStep();
+        if (textareaSeqFnc) {
+          textareaSeqFnc(textarea.value);
+        } else {
+          console.log(`child : onChangeTextarea : emit data : [${textarea.value}]`);
+          parent.emit('onChangeChild', textarea.value);
+        }
       }
     }
 
@@ -82,6 +87,11 @@ postmateMidi.registerChild = function(textareaId) {
     // console.log(`child : onmidimessage : received data : [${data}]`);
     postmateMidi.onMidiMessage(data);
   }
+}
+
+postmateMidi.registerSeq = (seq) => {
+  postmateMidi.seq = seq;
+  postmateMidi.seq.sendMidiMessage = postmateMidi.sendMidiMessage;
 }
 
 postmateMidi.sendMidiMessage = (event) => {
@@ -105,28 +115,37 @@ postmateMidi.onMidiMessage = function (event) {
   }
 };
 
-postmateMidi.registerTonejsStarter = function() {
-  const button = document.querySelector('button');
+postmateMidi.registerTonejsStarter = function(buttonSelector, playFnc) {
+  const button = document.querySelector(buttonSelector);
   button.onclick = function() {
     postmateMidi.initTonejsByUserAction();
-    postmateMidi.seq.togglePlay();
+    playFnc();
   };
 }
+let defaultSynth; // postmateMidiのプロパティにしない。影響範囲を狭くする用。
 postmateMidi.initTonejsByUserAction = function() {
   // if (Tone.context.state === "running") return; // ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
-  if (postmateMidi.synth) return;
+  if (defaultSynth) return;
 
   async () => {
     await Tone.start();
   }
-  postmateMidi.synth = new Tone.Synth().toDestination();
+
+  createDefaultSynth();
+}
+function createDefaultSynth() {
+  defaultSynth = new Tone.PolySynth(Tone.Synth, {oscillator: {type: 'sine'}}); // polyとする。poly用のseqを鳴らすときに、monoのsynthだと混乱したので。
+  const vol = new Tone.Volume(-12);
+
+  defaultSynth.connect(vol);
+  vol.toDestination();
 }
 postmateMidi.noteOn = function(noteNum) {
   postmateMidi.initTonejsByUserAction();
-  postmateMidi.synth.triggerAttack(Tone.Midi(noteNum).toFrequency());
+  defaultSynth.triggerAttack(Tone.Midi(noteNum).toFrequency());
 }
 postmateMidi.noteOff = function(noteNum) {
-  postmateMidi.synth.triggerRelease(Tone.Midi(noteNum).toFrequency());
+  defaultSynth.triggerRelease(Tone.Midi(noteNum).toFrequency());
 }
 
 export { postmateMidi };

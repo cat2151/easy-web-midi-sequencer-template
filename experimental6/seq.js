@@ -8,27 +8,32 @@ const seq = {};
 seq.togglePlay = () => {
   seq.isPlaying = !seq.isPlaying;
   if (seq.isPlaying) {
-    seq.init();
+    init();
   }
   seqPlay();
 }
 
+seq.initAndPlayStep = () => {
+  init();
+  playStep()
+}
+
 function seqPlay() {
   if (seq.isPlaying) {
-    const time = seq.playStep();
+    const time = playStep();
     setTimeout(seqPlay, time);
   } else {
     sendNoteOff();
   }
 }
 
-seq.init = () => {
+function init() {
   seq.stepTime = calcStepTimeMsec(BPM, BEAT_NOTE);
   seq.baseTime = performance.now();
   seq.playTime = 0;
 }
 
-seq.playStep = () => {
+function playStep() {
   sendNoteOn(/*noteNum = */60);
   sendNoteOn(/*noteNum = */64);
   sendNoteOn(/*noteNum = */67);
