@@ -162,39 +162,30 @@ postmateMidi.onMidiMessage = function (events) {
 
 ////////////////////
 // synth by Tone.js
-postmateMidi.registerTonejsStarter = function(buttonSelector, playFnc) {
+// 用途、各種Tone.js系synth js（以下synth js）のコードのうち共通部分をここに集約することで、synth jsの実装をシンプルにする。
+//  必要に応じてsynth js側でそれらを上書きしてよい。
+//  注意、ただしnote onと、セットとなるnote offだけは、synth js側で実装必須とする。そうしないとsynth js側単体でnote onできなくなり、わかりづらいため。
+postmateMidi.registerTonejsStarter = function(buttonSelector, playButtonFnc) {
   const button = document.querySelector(buttonSelector);
   button.onclick = function() {
     postmateMidi.initTonejsByUserAction();
-    playFnc();
+    playButtonFnc();
   };
 }
-let defaultSynth; // postmateMidiのプロパティにしない。影響範囲を狭くする用。
 postmateMidi.initTonejsByUserAction = function() {
   // if (Tone.context.state === "running") return; // ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
-  if (defaultSynth) return;
+  if (postmateMidi.isStartTone) return;
 
   async () => {
     await Tone.start();
   }
-
-  createDefaultSynth();
-}
-function createDefaultSynth() {
-  defaultSynth = new Tone.PolySynth(Tone.Synth, {oscillator: {type: 'sawtooth'}}); // polyとする。poly用のseqを鳴らすときに、monoのsynthだと混乱したので。
-  const filter = new Tone.Filter({type: "lowpass", frequency: 2400});
-  const vol = new Tone.Volume(-15);
-
-  defaultSynth.connect(filter);
-  filter.connect(vol);
-  vol.toDestination();
+  postmateMidi.isStartTone = true;
 }
 postmateMidi.noteOn = function(noteNum) {
-  postmateMidi.initTonejsByUserAction();
-  defaultSynth.triggerAttack(Tone.Midi(noteNum).toFrequency());
+  alert("noteOnを実装してください");
 }
 postmateMidi.noteOff = function(noteNum) {
-  defaultSynth.triggerRelease(Tone.Midi(noteNum).toFrequency());
+  alert("noteOffを実装してください");
 }
 postmateMidi.controlChange = function(controller, v) {
   switch (controller) {
@@ -202,10 +193,10 @@ postmateMidi.controlChange = function(controller, v) {
   }
 }
 postmateMidi.allNoteOff = function() {
-  // PolySynthは明示的にnoteNumの指定が必要。また、タイミング次第では1回で不足のことがあったので、ひとまず4回noteOffしておく
+  // PolySynthは明示的にnoteNumの指定をしないとエラーになった。また、タイミング次第では1回で不足のことがあったので、ひとまず4回noteOffとした。
   for (let noteNum = 0; noteNum < 128; noteNum++) {
     for (let i = 0; i < 4; i++) {
-      defaultSynth.triggerRelease(Tone.Midi(noteNum).toFrequency());
+      postmateMidi.synth.triggerRelease(Tone.Midi(noteNum).toFrequency());
     }
   }
 }
