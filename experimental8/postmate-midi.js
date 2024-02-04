@@ -1,5 +1,5 @@
 // usage : parent.js / child.js を参照ください
-const postmateMidi = {};
+const postmateMidi = {parent: null, child: null, isParent:null, isChild:null};
 
 postmateMidi.registerParent = function(url, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const handshake = new Postmate({
@@ -24,7 +24,10 @@ postmateMidi.registerParent = function(url, textareaSelector, textareaSeqFnc, te
     });
     child.on('onmidimessage', data => {
       // console.log(`parent : onmidimessage : received data : [${data}]`);
-      postmateMidi.onMidiMessage(data);
+      postmateMidi.onMidiMessage(/*events=*/data[0], /*time=*/data[1]);
+    });
+    child.on('onStartPlaying', data => {
+      postmateMidi.onStartPlaying(data);
     });
 
     // childとの双方向通信のtest用
@@ -55,7 +58,8 @@ postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textarea
     height: () => document.height || document.body.offsetHeight,
     onCompleteHandshakeParent,
     onChangeParent,
-    onmidimessage
+    onmidimessage,
+    onStartPlaying
   });
 
   handshake.then(parent => {
@@ -93,8 +97,18 @@ postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textarea
   }
   function onmidimessage(data) {
     // console.log(`child : onmidimessage : received data : [${data}]`);
-    postmateMidi.onMidiMessage(data);
+    postmateMidi.onMidiMessage(/*events=*/data[0], /*time=*/data[1]);
   }
+  function onStartPlaying(data) {
+    postmateMidi.onStartPlaying(data);
+  };
+}
+
+postmateMidi.isParent = () => {
+  return Boolean(postmateMidi.child); // childを持っているならparent。code中に if (postmateMidi.child) があると、isChildの意味と混同してミスしたので、防止用にisを用意した。
+}
+postmateMidi.isChild = () => {
+  return Boolean(postmateMidi.parent); // parentを持っているならchild
 }
 
 ////////////////////////////////////////////////
@@ -133,32 +147,82 @@ function setupSelect(textareaTemplateDropDownListSelector, textareaTemplatesFnc,
 postmateMidi.registerSeq = (seq) => {
   postmateMidi.seq = seq;
   postmateMidi.seq.sendMidiMessage = postmateMidi.sendMidiMessage;
+  postmateMidi.seq.initOnStartPlaying = initOnStartPlaying;
 }
 
-postmateMidi.sendMidiMessage = (event) => {
-  if (postmateMidi.child) {
-    postmateMidi.child.call('onmidimessage', event);
+function initOnStartPlaying() {
+  // seqから呼ばれ、synth側のbaseTimeStampを更新する用
+  if (postmateMidi.isParent()) {
+    postmateMidi.child.call('onStartPlaying');
+  }
+  if (postmateMidi.isChild()) {
+    postmateMidi.parent.emit('onStartPlaying');
+  }
+}
+
+postmateMidi.onStartPlaying = () => {
+  // parentからchild、childからparentへ、相手のbaseTimeStampを更新させる用に呼ばれる
+  initBaseTimeStampAudioContext();
+}
+
+function initBaseTimeStampAudioContext() {
+  // Bassのヨレ、和音の構成音ごとの発音タイミングズレ、を防止するため、seq側は演奏予定時刻を指定してpostmate-midiにわたす。postmate-midiはそれを加工してTone.jsにわたす。
+  //  流れは：
+  //   postmateMidiが受信したmidimessageは：
+  //     playTimeが付与されている。
+  //   postmateMidiの処理は：
+  //     受信したらすぐTone.jsをtriggerする。
+  //       このとき、演奏予定timestampをわたす。
+  //       演奏予定timestampは：
+  //         playTimeと、synth側pageのbaseTimeStampAudioContext（seq側pageのbaseTimeStampAudioContextとは別）から算出する。
+  //          このとき50msec程度の猶予をもたせることで、seq側のテンポのヨレを吸収して、Tone.js側は正確なタイミングで発音できる。
+  if (!postmateMidi.tonejs) {
+    postmateMidi.tonejs = {};
+  }
+  postmateMidi.tonejs.baseTimeStampAudioContext = Tone.now(); // 注意、performance.now() と混同しないこと。違う値となることを確認した。Tone.jsのtriggerに使うのでTone.now()のほうを使う。
+}
+
+postmateMidi.sendMidiMessage = (events, playTime) => {
+  if (postmateMidi.isParent()) {
+    postmateMidi.child.call('onmidimessage', [events, playTime]);
     return;
   }
-  if (postmateMidi.parent) {
-    postmateMidi.parent.emit('onmidimessage', event);
+  if (postmateMidi.isChild()) {
+    postmateMidi.parent.emit('onmidimessage', [events, playTime]);
     return;
   }
 }
 
-postmateMidi.onMidiMessage = function (events) {
+postmateMidi.onMidiMessage = function (events, playTimeMsec) {
+  let baseMsec;
+  if (postmateMidi.tonejs) { // consoleにエラーログを出さない用
+    baseMsec = postmateMidi.tonejs.baseTimeStampAudioContext * 1000;
+  } else {
+    baseMsec = Tone.now();
+  }
+  const ofsMsec = 50; // timestampが過去にならない程度の値とした。過去になると発音やenvelopeが異常となる想定。手元では50msecがそこそこ安定した感触。今後は環境ごとに指定可能にする想定。
+  const timestamp = (baseMsec + playTimeMsec + ofsMsec) / 1000;
+  // console.log(`synth: ${getMidiEventName(events[0][0])} ${Math.floor((timestamp - Tone.now()) * 1000)}`);
+  // if (timestamp - Tone.now() < 0) alert(); // timestampが過去になっていないことをチェック
   for (const event of events) {
-    // console.log(event);
     switch (event[0]) {
     // note on
-    case 0x90: postmateMidi.noteOn(event[1]); break;
+    case 0x90: postmateMidi.noteOn(event[1], timestamp); break;
     // note off
-    case 0x80: postmateMidi.noteOff(event[1]); break;
+    case 0x80: postmateMidi.noteOff(event[1], timestamp); break;
     // control change
     case 0xB0: postmateMidi.controlChange(event[1], event[2]); break;
     }
   }
 };
+
+function getMidiEventName(i) { // for debug
+  switch (i) {
+  case 0x90: return 'noteOn';
+  case 0x80: return 'noteOff';
+  case 0xB0: return 'ControlChange';
+  }
+}
 
 ////////////////////
 // synth by Tone.js

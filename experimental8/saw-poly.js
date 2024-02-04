@@ -13,12 +13,12 @@ function initSynth(s) {
   s.noteOff = noteOff;
   s.synth = synth;
 
-  function noteOn(noteNum, timeStamp) {
-    synth.triggerAttack(Tone.Midi(noteNum).toFrequency(), timeStamp);
+  function noteOn(noteNum, timestamp) {
+    synth.triggerAttack(Tone.Midi(noteNum).toFrequency(), timestamp);
   };
 
-  function noteOff(noteNum, timeStamp) {
-    synth.triggerRelease(Tone.Midi(noteNum).toFrequency(), timeStamp);
+  function noteOff(noteNum, timestamp) {
+    synth.triggerRelease(Tone.Midi(noteNum).toFrequency(), timestamp);
   };
 }
 
