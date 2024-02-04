@@ -162,6 +162,7 @@ function initOnStartPlaying() {
 
 postmateMidi.onStartPlaying = () => {
   // parentからchild、childからparentへ、相手のbaseTimeStampを更新させる用に呼ばれる
+  initTonejsByUserAction();
   initBaseTimeStampAudioContext();
 }
 
@@ -193,6 +194,7 @@ postmateMidi.sendMidiMessage = (events, playTime) => {
   }
 }
 
+const ofsMsec = 50; // timestampが過去にならない程度の値とした。過去になると発音やenvelopeが異常となる想定。手元では50msecがそこそこ安定した感触。今後は環境ごとに指定可能にする想定。
 postmateMidi.onMidiMessage = function (events, playTimeMsec) {
   let baseMsec;
   if (postmateMidi.tonejs) { // consoleにエラーログを出さない用
@@ -200,9 +202,8 @@ postmateMidi.onMidiMessage = function (events, playTimeMsec) {
   } else {
     baseMsec = Tone.now();
   }
-  const ofsMsec = 50; // timestampが過去にならない程度の値とした。過去になると発音やenvelopeが異常となる想定。手元では50msecがそこそこ安定した感触。今後は環境ごとに指定可能にする想定。
   const timestamp = (baseMsec + playTimeMsec + ofsMsec) / 1000;
-  // console.log(`synth: ${getMidiEventName(events[0][0])} ${Math.floor((timestamp - Tone.now()) * 1000)}`);
+  // console.log(`synth: ${getMidiEventName(events[0][0])} ${Math.floor((timestamp - Tone.now()) * 1000)}`); // ofsMsecのチューニング用
   // if (timestamp - Tone.now() < 0) alert(); // timestampが過去になっていないことをチェック
   for (const event of events) {
     switch (event[0]) {
@@ -215,6 +216,11 @@ postmateMidi.onMidiMessage = function (events, playTimeMsec) {
     }
   }
 };
+
+function getParentOrChild() { // for debug
+  if (postmateMidi.isParent()) return 'parent';
+  if (postmateMidi.isChild()) return 'child';
+}
 
 function getMidiEventName(i) { // for debug
   switch (i) {
@@ -232,17 +238,22 @@ function getMidiEventName(i) { // for debug
 postmateMidi.registerTonejsStarter = function(buttonSelector, playButtonFnc) {
   const button = document.querySelector(buttonSelector);
   button.onclick = function() {
-    postmateMidi.initTonejsByUserAction();
+    initTonejsByUserAction();
     playButtonFnc();
   };
 }
-postmateMidi.initTonejsByUserAction = function() {
+function initTonejsByUserAction() {
   // if (Tone.context.state === "running") return; // ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
   if (postmateMidi.isStartTone) return;
 
   async () => {
     await Tone.start();
   }
+
+  // 以降の発音を可能にする用のダミー。ないと音が鳴らないことがあった。
+  postmateMidi.synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
+  postmateMidi.synth.triggerRelease(Tone.Midi(69).toFrequency());
+
   postmateMidi.isStartTone = true;
 }
 postmateMidi.noteOn = function(noteNum) {
