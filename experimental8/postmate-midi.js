@@ -263,10 +263,10 @@ postmateMidi.tonejs.noteOff = function(noteNum) {
 }
 
 for (let i = 0; i < 128; i++) {
-  postmateMidi.tonejs.controlChange[i] = (controller, v) => {}; // noteOnと違って実装を省略可。noteOnのように上書き可。
+  postmateMidi.tonejs.controlChange[i] = (v) => {}; // noteOnと違って実装を省略可。noteOnのように上書き可。
 }
 
-postmateMidi.tonejs.controlChange[0x78] = (controller, v) => {
+postmateMidi.tonejs.controlChange[0x78] = (v) => {
   allSoundOff();
   function allSoundOff() {
     const synth = postmateMidi.tonejs.synth;
@@ -278,7 +278,7 @@ postmateMidi.tonejs.controlChange[0x78] = (controller, v) => {
   }
 };
 
-postmateMidi.tonejs.controlChange[0x7B] = (controller, v) => {
+postmateMidi.tonejs.controlChange[0x7B] = (v) => {
   allNoteOff();
   function allNoteOff() {
     const synth = postmateMidi.tonejs.synth;
@@ -291,5 +291,5 @@ postmateMidi.tonejs.controlChange[0x7B] = (controller, v) => {
   }
 };
 
-////////////////////
+/////////////////////////
 export { postmateMidi };
