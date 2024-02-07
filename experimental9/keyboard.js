@@ -1,55 +1,110 @@
 // 用途 : 簡易仮想MIDIキーボードのtest用
 // usage : parent.js / child.js の import "./keyboard.js"; 付近を参照ください
-const kb = { mouseNoteNums: [], mouseLastNoteNum: null, keyboardNoteNums: [], keyShift: 0 };
+const kb = { mouseNoteNums: [], mouseLastNoteNum: null, keyboardNoteNums: [], keyShift: 0, isTouch: false };
 
 kb.init = (keyShift) => {
   kb.keyShift = keyShift; // parent / child から個別の値を指定して呼び出す用
 }
 
+////////////
+// mouse
 onmousedown = (event) => {
-  const noteNum = getPenta(getMouseNoteNum(event.clientX));
-  console.log("down", `x:${event.clientX} y:${event.clientY}`, noteNum)
+  if (kb.isTouch) return; // iPadやAndroidで意図せぬ発音処理をさせない用（タッチ後にタップでmouseイベントが発生してここに到達する）
+  const x = event.clientX;
+  console.log("onmousedown", `x:${x} y:${event.clientY}`)
+  onmousedownOrTouchStart(x);
+};
+onmouseup = (event) => {
+  if (kb.isTouch) return;
+  console.log("onmouseup");
+  onmouseupOrTouchEnd();
+};
+onmousemove = (event) => {
+  if (kb.isTouch) return;
+  console.log("onmousemove")
+  const x = event.clientX;
+  onmousemoveOrTouchMove(x);
+};
+addEventListener("blur", (ev) => { // ALT+TAB等で発生する
+  console.log("blur");
+  allNoteOff();
+});
+
+///////////////////
+// touch device
+addEventListener("touchstart", (ev) => {
+  kb.isTouch = true;
+  const x = Math.floor(ev.changedTouches[0].clientX);
+  console.log("touchstart", ev, x);
+  onmousedownOrTouchStart(x);
+});
+addEventListener("touchmove", (ev) => {
+  kb.isTouch = true;
+  const x = Math.floor(ev.changedTouches[0].clientX);
+  console.log("touchmove", ev, x, window.innerWidth);
+  onmousemoveOrTouchMove(x);
+});
+addEventListener("touchcancel", (ev) => { // ALT+TAB等で発生する
+  kb.isTouch = true;
+  console.log("touchcancel");
+  onmouseupOrTouchEnd();
+});
+addEventListener("touchend", (ev) => {
+  kb.isTouch = true;
+  console.log("touchend", ev);
+  onmouseupOrTouchEnd();
+});
+
+////////////////////
+// mouse or touch
+function onmousedownOrTouchStart(x) {
+  const noteNum = getPenta(getMouseNoteNum(x));
   if (noteNum == kb.mouseLastNoteNum) return;
   noteOn(noteNum);
   kb.mouseNoteNums.push(noteNum);
   kb.mouseLastNoteNum = noteNum;
-};
-onmouseup = (event) => {
-  console.log("up")
-  noteOff(kb.mouseNoteNums.pop());
-  kb.mouseLastNoteNum = null;
-};
-onmousemove = (event) => {
-  console.log("move")
-  const noteNum = getPenta(getMouseNoteNum(event.clientX));
+}
+function onmousemoveOrTouchMove(x) {
+  const noteNum = getPenta(getMouseNoteNum(x));
   if (kb.mouseLastNoteNum == null) return;
   if (noteNum == kb.mouseLastNoteNum) return;
   noteOff(kb.mouseNoteNums.pop());
   noteOn(noteNum);
   kb.mouseNoteNums.push(noteNum);
   kb.mouseLastNoteNum = noteNum;
-};
+}
+function onmouseupOrTouchEnd() {
+  while (kb.mouseNoteNums.length) {
+    noteOff(kb.mouseNoteNums.pop());
+  }
+  kb.mouseLastNoteNum = null;
+}
 
 function getMouseNoteNum(x) {
   return 36 + Math.floor(x / window.innerWidth * 48);
 }
 
+/////////////
+// keyboard
 onkeydown = (event) => {
   const noteNum = getPenta(getKeyboardNoteNum(event.code));
-  console.log("down", event.code, noteNum)
+  console.log("onkeydown", event.code, noteNum)
+  if (noteNum < 0) return;
   if (kb.keyboardNoteNums[noteNum]) return;
   kb.keyboardNoteNums[noteNum] = true;
   noteOn(noteNum);
 };
 onkeyup = (event) => {
   const noteNum = getPenta(getKeyboardNoteNum(event.code));
-  console.log("up", event.code, noteNum)
+  console.log("onkeyup", event.code, noteNum)
+  if (noteNum < 0) return;
   noteOff(noteNum);
   kb.keyboardNoteNums[noteNum] = false;
 };
 
 function getKeyboardNoteNum(key) {
   const i = "ASDFGHJKL".indexOf(key.replace("Key", ""));
+  if (i < 0) return i;
   return 60 + i2penta(i);
   function i2penta(i) {
     switch (i) {
@@ -67,6 +122,7 @@ function getKeyboardNoteNum(key) {
 }
 
 function getPenta(noteNum) {
+  if (noteNum < 0) return noteNum;
   const octave = Math.floor(noteNum / 12);
   const semitone = noteNum % 12;
   const result = octave * 12 + semitone2penta(semitone);
@@ -91,6 +147,8 @@ function getPenta(noteNum) {
   }
 }
 
+////////
+// MIDI
 function noteOn(noteNum) {
   noteNum += kb.keyShift;
   kb.initOnStartPlaying();
@@ -99,6 +157,9 @@ function noteOn(noteNum) {
 function noteOff(noteNum) {
   noteNum += kb.keyShift;
   kb.sendMidiMessage([[0x80, noteNum, 127]]);
+}
+function allNoteOff() {
+  kb.sendMidiMessage([new Uint8Array([0xB0, 0x7B, 0])]);
 }
 
 export { kb };
