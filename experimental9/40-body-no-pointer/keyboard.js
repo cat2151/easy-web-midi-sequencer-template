@@ -9,8 +9,8 @@ kb.init = (keyShift) => {
 ////////////////////////////
 // mouse or touch device
 // TODO body #div を指定してiPadで結果を比較する
-const elm = document.querySelector("#div"); // bodyや#divの場合は、childの下の空白をpointしても音が鳴らない（そこはbodyやdivではないということ）。bodyやdiv範囲外に出るとmouseup等を検知できない（そこはbodyやdivではないということ）。
-// const elm = window; // windowの場合は、childの下の空白をpointしても音が鳴る（そこはwindowなので）。bodyやdiv範囲外に出てもmouseupを検知できる（そこはwindowなので）。
+const elm = document.querySelector("body"); // bodyや#divの場合は、childの下の空白をpointしても音が鳴らない（そこはbodyやdivではないということ）。bodyやdiv範囲外に出るとmouseup等を検知できない（そこはbodyやdivではないということ）。
+//const elm = window; // windowの場合は、childの下の空白をpointしても音が鳴る（そこはwindowなので）。bodyやdiv範囲外に出てもmouseupを検知できる（そこはwindowなので）。
 // 課題、elmにbodyやdivを指定した場合、bodyやdivの範囲外でmouseupすると音が鳴りっぱなしになってしまう。応急対応は、再度bodyやdivの範囲内でmouseupすること。
 
 ////////////
@@ -67,32 +67,32 @@ elm.addEventListener("touchend", (ev) => {
 ////////////////////////////////////
 // pointer (mouse or touch device)
 // PCで到達する。PCのChrome DevToolsのDevice modeのiPad simulateで到達する。実機iPadとAndroidで到達するかは未確認。
-elm.addEventListener("pointerdown", (ev) => {
-  if (kb.isTouch) return;
-  kb.isPoint = true;
-  const x = Math.floor(ev.clientX);
-  console.log("pointerdown", ev, x);
-  onmousedownOrTouchStart(x);
-});
-elm.addEventListener("pointermove", (ev) => {
-  if (kb.isTouch) return;
-  kb.isPoint = true;
-  console.log("pointermove")
-  const x = ev.clientX;
-  onmousemoveOrTouchMove(x);
-});
-elm.addEventListener("pointercancel", (ev) => { // 発生未確認。ALT+TABでは発生しなかった。
-  if (kb.isTouch) return;
-  kb.isPoint = true;
-  console.log("pointercancel");
-  onmouseupOrTouchEnd();
-});
-elm.addEventListener("pointerup", (ev) => {
-  if (kb.isTouch) return;
-  kb.isPoint = true;
-  console.log("pointerup");
-  onmouseupOrTouchEnd();
-});
+//elm.addEventListener("pointerdown", (ev) => {
+//  if (kb.isTouch) return;
+//  kb.isPoint = true;
+//  const x = Math.floor(ev.clientX);
+//  console.log("pointerdown", ev, x);
+//  onmousedownOrTouchStart(x);
+//});
+//elm.addEventListener("pointermove", (ev) => {
+//  if (kb.isTouch) return;
+//  kb.isPoint = true;
+//  console.log("pointermove")
+//  const x = ev.clientX;
+//  onmousemoveOrTouchMove(x);
+//});
+//elm.addEventListener("pointercancel", (ev) => { // 発生未確認。ALT+TABでは発生しなかった。
+//  if (kb.isTouch) return;
+//  kb.isPoint = true;
+//  console.log("pointercancel");
+//  onmouseupOrTouchEnd();
+//});
+//elm.addEventListener("pointerup", (ev) => {
+//  if (kb.isTouch) return;
+//  kb.isPoint = true;
+//  console.log("pointerup");
+//  onmouseupOrTouchEnd();
+//});
 
 ////////////////////
 // mouse or touch
