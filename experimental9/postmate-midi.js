@@ -117,13 +117,18 @@ function getParentOrChild() { // for debug
 
 ////////
 // UI
-postmateMidi.ui.registerPlayButton = function(buttonSelector, playButtonFnc) {
+postmateMidi.ui.registerPlayButton = function(buttonSelector, playButtonFnc, isRemovePlayButtonAtTonejsStartRunning) {
   const ui = postmateMidi.ui;
   ui.button = document.querySelector(buttonSelector);
   ui.button.onclick = function() {
     postmateMidi.tonejs.initTonejsByUserAction();
     playButtonFnc();
   };
+  ui.checkRemovePlayButton = () => {
+    // iPadでplayボタンを押さないと音が鳴らない問題の対策に関連して、playボタンを押してさらにTone.jsが問題なくrunningしたあとはplayボタンをremoveしてわかりやすくする用
+    if (!isRemovePlayButtonAtTonejsStartRunning) return;
+    if (postmateMidi.tonejs.isStartTone && Tone.context.state === "running") ui.button.remove();
+  }
 }
 
 function setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc) {
@@ -216,7 +221,7 @@ function getMidiEventName(i) { // for debug
   switch (i) {
   case 0x90: return 'noteOn';
   case 0x80: return 'noteOff';
-  case 0xB0: return 'ControlChange';
+  case 0xB0: return 'controlChange';
   }
 }
 
@@ -226,8 +231,9 @@ function getMidiEventName(i) { // for debug
 //  必要に応じてsynth js側でそれらを上書きしてよい。
 //  注意、ただしnote onと、セットとなるnote offだけは、synth js側で実装必須とする。そうしないとsynth jsソースだけ見たとき鳴らし方がわからず、ソースが読みづらいため。
 postmateMidi.tonejs.initTonejsByUserAction = () => {
-  // if (Tone.context.state === "running") return; // ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
-  if (postmateMidi.tonejs.isStartTone) return;
+  if (postmateMidi.tonejs.isStartTone && Tone.context.state === "running") return; // iPadだけ他の環境と挙動が異なり、stateがrunningにならないことがあるので、対策用。
+    // 備忘、if (Tone.context.state === "running") return; だと、ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
+    // 備忘、if (postmateMidi.tonejs.isStartTone) return; だと、iPadだけ他の環境と挙動が異なり、stateがrunningにならないことがあるので、対策が必要と判断した。
 
   async () => {
     await Tone.start();
@@ -239,6 +245,7 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
   synth.triggerRelease(Tone.Midi(69).toFrequency());
 
   postmateMidi.tonejs.isStartTone = true;
+  postmateMidi.ui.checkRemovePlayButton();
 }
 
 postmateMidi.tonejs.initBaseTimeStampAudioContext = () => {

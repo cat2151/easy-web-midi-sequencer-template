@@ -8,65 +8,13 @@ kb.init = (keyShift) => {
 
 ////////////////////////////
 // mouse or touch device
-// TODO body #div を指定してiPadで結果を比較する
-const elm = document.querySelector("#div"); // bodyや#divの場合は、childの下の空白をpointしても音が鳴らない（そこはbodyやdivではないということ）。bodyやdiv範囲外に出るとmouseup等を検知できない（そこはbodyやdivではないということ）。
-// const elm = window; // windowの場合は、childの下の空白をpointしても音が鳴る（そこはwindowなので）。bodyやdiv範囲外に出てもmouseupを検知できる（そこはwindowなので）。
-// 課題、elmにbodyやdivを指定した場合、bodyやdivの範囲外でmouseupすると音が鳴りっぱなしになってしまう。応急対応は、再度bodyやdivの範囲内でmouseupすること。
-
-////////////
-// mouse
-// PCで到達する
-elm.addEventListener("mousedown", (ev) => {
-  if (kb.isTouch || kb.isPoint) return; // iPadやAndroidで意図せぬ発音処理をさせない用（タッチ後にタップでmouseイベントが発生してここに到達する）
-  const x = ev.clientX;
-  console.log("mousedown", `x:${x} y:${ev.clientY}`)
-  onmousedownOrTouchStart(x);
-});
-elm.addEventListener("mouseup", (ev) => {
-  if (kb.isTouch || kb.isPoint) return;
-  console.log("mouseup");
-  onmouseupOrTouchEnd();
-});
-elm.addEventListener("mousemove", (ev) => {
-  if (kb.isTouch || kb.isPoint) return;
-  console.log("mousemove")
-  const x = ev.clientX;
-  onmousemoveOrTouchMove(x);
-});
-elm.addEventListener("blur", (ev) => { // ALT+TAB等で発生する
-  console.log("blur");
-  allNoteOff();
-});
-
-///////////////////
-// touch device
-// Androidで到達する
-elm.addEventListener("touchstart", (ev) => {
-  kb.isTouch = true;
-  const x = Math.floor(ev.changedTouches[0].clientX);
-  console.log("touchstart", ev, x);
-  onmousedownOrTouchStart(x);
-});
-elm.addEventListener("touchmove", (ev) => {
-  kb.isTouch = true;
-  const x = Math.floor(ev.changedTouches[0].clientX);
-  console.log("touchmove", ev, x, window.innerWidth);
-  onmousemoveOrTouchMove(x);
-});
-elm.addEventListener("touchcancel", (ev) => { // ALT+TAB等で発生する
-  kb.isTouch = true;
-  console.log("touchcancel");
-  onmouseupOrTouchEnd();
-});
-elm.addEventListener("touchend", (ev) => {
-  kb.isTouch = true;
-  console.log("touchend", ev);
-  onmouseupOrTouchEnd();
-});
+const elm = window; // windowの場合は、childの下の空白をpointしても音が鳴る（そこはwindowなので）。bodyやdiv範囲外に出てもmouseupを検知できる（そこはwindowなので）。
+//const elm = document.querySelector("#div"); // bodyや#divの場合は、childの下の空白をpointしても音が鳴らない（そこはbodyやdivではないということ）。bodyやdiv範囲外に出るとmouseup等を検知できない（そこはbodyやdivではないということ）。
 
 ////////////////////////////////////
 // pointer (mouse or touch device)
 // PCで到達する。PCのChrome DevToolsのDevice modeのiPad simulateで到達する。実機iPadとAndroidで到達するかは未確認。
+// シンプル優先で、mousedownやtouchstartは使わず、全環境で動作するかテストする。
 elm.addEventListener("pointerdown", (ev) => {
   if (kb.isTouch) return;
   kb.isPoint = true;
@@ -93,6 +41,57 @@ elm.addEventListener("pointerup", (ev) => {
   console.log("pointerup");
   onmouseupOrTouchEnd();
 });
+
+//////////////
+//// mouse
+//// PCで到達する
+//elm.addEventListener("mousedown", (ev) => {
+//  if (kb.isTouch || kb.isPoint) return; // iPadやAndroidで意図せぬ発音処理をさせない用（タッチ後にタップでmouseイベントが発生してここに到達する）
+//  const x = ev.clientX;
+//  console.log("mousedown", `x:${x} y:${ev.clientY}`)
+//  onmousedownOrTouchStart(x);
+//});
+//elm.addEventListener("mouseup", (ev) => {
+//  if (kb.isTouch || kb.isPoint) return;
+//  console.log("mouseup");
+//  onmouseupOrTouchEnd();
+//});
+//elm.addEventListener("mousemove", (ev) => {
+//  if (kb.isTouch || kb.isPoint) return;
+//  console.log("mousemove")
+//  const x = ev.clientX;
+//  onmousemoveOrTouchMove(x);
+//});
+//elm.addEventListener("blur", (ev) => { // ALT+TAB等で発生する
+//  console.log("blur");
+//  allNoteOff();
+//});
+//
+/////////////////////
+//// touch device
+//// Androidで到達する
+//elm.addEventListener("touchstart", (ev) => {
+//  kb.isTouch = true;
+//  const x = Math.floor(ev.changedTouches[0].clientX);
+//  console.log("touchstart", ev, x);
+//  onmousedownOrTouchStart(x);
+//});
+//elm.addEventListener("touchmove", (ev) => {
+//  kb.isTouch = true;
+//  const x = Math.floor(ev.changedTouches[0].clientX);
+//  console.log("touchmove", ev, x, window.innerWidth);
+//  onmousemoveOrTouchMove(x);
+//});
+//elm.addEventListener("touchcancel", (ev) => { // ALT+TAB等で発生する
+//  kb.isTouch = true;
+//  console.log("touchcancel");
+//  onmouseupOrTouchEnd();
+//});
+//elm.addEventListener("touchend", (ev) => {
+//  kb.isTouch = true;
+//  console.log("touchend", ev);
+//  onmouseupOrTouchEnd();
+//});
 
 ////////////////////
 // mouse or touch
