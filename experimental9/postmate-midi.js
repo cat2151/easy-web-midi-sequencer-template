@@ -241,27 +241,37 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
   if (postmateMidi.tonejs.isStartTone) return;
     // ↑ 備忘、if (Tone.context.state === "running") return; だと、ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
 
-  async () => {
-    await Tone.start();
-  }
-
-  // 以降の発音を可能にする用のダミー。ないと音が鳴らないことがあった。
-  const synth = postmateMidi.tonejs.synth;
-  synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
-  synth.triggerRelease(Tone.Midi(69).toFrequency());
-
-  // iPadで1回目のplayボタン押下ではrunning到達せず、2回目で到達するので、ユーザーが混乱する問題、の対策用に、試す用
   if (isIpad()) {
+    // iPadで1回目のplayボタン押下では10秒待ってもrunning到達せず、2回目で到達するので、ユーザーが混乱する問題、の対策用に、試す用
     const t0 = performance.now();
     let oldSec = 0;
     while (Tone.context.state !== "running") {
       const t = performance.now();
       const sec = Math.floor((t - t0) / 1000);
       if (sec != oldSec) {
+
+        async () => {
+          await Tone.start();
+        }
+
+        // 以降の発音を可能にする用のダミー。ないと音が鳴らないことがあった。
+        const synth = postmateMidi.tonejs.synth;
+        synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
+        synth.triggerRelease(Tone.Midi(69).toFrequency());
+
         console.log(`${sec}`);
         oldSec = sec;
       }
     }
+  } else {
+    async () => {
+      await Tone.start();
+    }
+
+    // 以降の発音を可能にする用のダミー。ないと音が鳴らないことがあった。
+    const synth = postmateMidi.tonejs.synth;
+    synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
+    synth.triggerRelease(Tone.Midi(69).toFrequency());
   }
 
   if (Tone.context.state === "running") { // 条件をrunningにするのは、iPad対策用。iPadだけ他の環境と挙動が異なり、ここまで到達してもrunningにならないことがある（pointerdownによる到達の場合）。そのための対策用。
