@@ -1,40 +1,51 @@
 // usage : parent.js / child.js を参照ください
-const postmateMidi = { parent: null, children: [],
+const postmateMidi = { parent: null, children: [], childId: null,
   ui: { registerPlayButton: null, isIpad },
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
   tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [], initTonejsByUserAction: null } };
 
 postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
-  for (let childId = 0; childId < urls.length; childId++) {
+  (async () => {
+    for (let childId = 0; childId < urls.length; childId++) {
+      doHandshake(childId);
+      /*sleep*/await new Promise(resolve => setTimeout(resolve, 500)); // child2.jsのwaitに合わせること
+    }
+  })();
 
+  function doHandshake(childId) {
+    const childName = `child${childId + 1}(${urls[childId]})`;
+    console.log(`parent : start handshake to ${childName}`);
     const handshake = new Postmate({
       url: urls[childId]
     });
 
     handshake.then(child => {
-      console.log('parent : handshake is complete');
-      child.call('onCompleteHandshakeParent', '"Hello, World!" by parent');
+      console.log(`parent : handshake is complete : to ${childName}`);
+      child.call('onCompleteHandshakeParent', `"Hello, ${childName}!" by parent`);
 
       child.get('height')
       .then(height => child.frame.style.height = `${height * 1.5}px`);
         // ↑ 見切れる。原因不明。取り急ぎ height * 1.5 した
 
       // Listen to a particular event from the child
-      child.on('onCompleteHandshakeChild', data => {
-        console.log(`parent : onCompleteHandshakeChild : received data : [${data}]`);
+      child.on('onCompleteHandshakeChild' + (childId + 1), data => {
+        console.log(`parent : onCompleteHandshakeChild : from ${childName} : received data : [${data}]`);
       });
-      child.on('onChangeChildTextarea', data => {
-        console.log(`parent : onChangeChildTextarea : received data : [${data}]`);
+      child.on('onChangeChildTextarea' + (childId + 1), data => {
+        console.log(`parent : onChangeChildTextarea : from ${childName} : received data : [${data}]`);
         ui.textarea.value = data;
       });
-      child.on('onStartPlaying', data => {
+      child.on('onStartPlaying' + (childId + 1), data => {
+        console.log(`parent : onStartPlaying : from ${childName} : received data : [${data}]`);
         onStartPlaying(data);
       });
-      child.on('onSynthReady', data => {
+      child.on('onSynthReady' + (childId + 1), data => {
+        console.log(`parent : onSynthReady : from ${childName} : received data : [${data}]`);
         onSynthReady(data);
       });
-      child.on('onmidimessage', data => {
+      child.on('onmidimessage' + (childId + 1), data => {
+        console.log(`parent : onmidimessage : from ${childName} : received data : [${data}]`);
         onmidimessage(data);
       });
 
@@ -61,7 +72,7 @@ postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, t
   }
 }
 
-postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+postmateMidi.registerChild = function(childId, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
 
   const handshake = new Postmate.Model({
@@ -75,8 +86,8 @@ postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textarea
   });
 
   handshake.then(parent => {
-    console.log('child : handshake is complete');
-    parent.emit('onCompleteHandshakeChild', '"Hello, World!" by child');
+    console.log(`child${childId + 1} : handshake is complete`);
+    parent.emit('onCompleteHandshakeChild' + (childId + 1), `"Hello, World!" by child${childId + 1}`);
 
     // parentとの双方向通信のtest用
     if (textareaSelector) {
@@ -90,21 +101,22 @@ postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textarea
         if (textareaSeqFnc) {
           textareaSeqFnc(ui.textarea.value);
         } else {
-          console.log(`child : onChangeTextarea : emit data : [${ui.textarea.value}]`);
-          parent.emit('onChangeChildTextarea', ui.textarea.value);
+          console.log(`child${childId + 1} : onChangeTextarea : emit data : [${ui.textarea.value}]`);
+          parent.emit('onChangeChildTextarea' + (childId + 1), ui.textarea.value);
         }
       }
     }
 
     postmateMidi.parent = parent;
+    postmateMidi.childId = childId;
   });
 
   // parentからcallされる
   function onCompleteHandshakeParent(data) {
-    console.log(`child : onCompleteHandshakeParent : received data : [${data}]`);
+    console.log(`child${childId + 1} : onCompleteHandshakeParent : received data : [${data}]`);
   }
   function onChangeParentTextarea(data) {
-    console.log(`child : onChangeParentTextarea : received data : [${data}]`);
+    console.log(`child${childId + 1} : onChangeParentTextarea : received data : [${data}]`);
     ui.textarea.value = data;
   }
 }
@@ -118,7 +130,7 @@ function isChild() {
 
 function getParentOrChild() { // for debug
   if (isParent()) return 'parent';
-  if (isChild()) return 'child';
+  if (isChild()) return `child${postmateMidi.childId + 1}`;
 }
 
 ////////
@@ -200,7 +212,7 @@ function initOnStartPlaying() {
   }
   if (isChild()) {
     console.log(`${getParentOrChild()} : emit onStartPlaying`);
-    postmateMidi.parent.emit('onStartPlaying');
+    postmateMidi.parent.emit('onStartPlaying' + (postmateMidi.childId + 1));
   }
 }
 
@@ -217,7 +229,7 @@ function sendMidiMessage(events, playTime) {
     return;
   }
   if (isChild()) {
-    postmateMidi.parent.emit('onmidimessage', [events, playTime]);
+    postmateMidi.parent.emit('onmidimessage' + (postmateMidi.childId + 1), [events, playTime]);
     return;
   }
 }
@@ -301,7 +313,7 @@ function afterTonejsStart() {
   }
   if (isChild()) {
     postmateMidi.tonejs.isStartToneChild = true;
-    postmateMidi.parent.emit('onSynthReady');
+    postmateMidi.parent.emit('onSynthReady' + (postmateMidi.childId + 1));
   }
   checkAllSynthReady();
 }
