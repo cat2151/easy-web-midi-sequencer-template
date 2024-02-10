@@ -167,6 +167,7 @@ postmateMidi.seq.registerSeq = (sq) => {
   postmateMidi.seq = sq;
   postmateMidi.seq.sendMidiMessage = sendMidiMessage;       // 外部sq側から使う用
   postmateMidi.seq.initOnStartPlaying = initOnStartPlaying; // 〃
+  postmateMidi.seq.getSynthReady = () => { return postmateMidi.tonejs.isStartTone; } // 〃
 }
 
 function initOnStartPlaying() {

@@ -188,16 +188,26 @@ function getPenta(noteNum) {
 ////////
 // MIDI
 function noteOn(noteNum) {
+  if (!checkInitSynth()) return;
   noteNum += kb.keyShift;
-  kb.initOnStartPlaying();
   kb.sendMidiMessage([[0x90, noteNum, 127]]);
 }
 function noteOff(noteNum) {
+  if (!checkInitSynth()) return;
   noteNum += kb.keyShift;
   kb.sendMidiMessage([[0x80, noteNum, 127]]);
 }
 function allNoteOff() {
+  if (!checkInitSynth()) return;
   kb.sendMidiMessage([new Uint8Array([0xB0, 0x7B, 0])]);
+}
+
+function checkInitSynth() {
+  const ready = kb.getSynthReady(); // iPadは他の環境と異なり、playボタンを押さずにWeb Audioを呼び続けると最終的にplayボタンを押しても一切音が鳴らなくなりユーザーが混乱するため、playボタンを押していないときはWeb Audioを一切呼ばないようにする、という対策用。
+  if (!ready) {
+    kb.initOnStartPlaying();
+  }
+  return ready;
 }
 
 export { kb };
