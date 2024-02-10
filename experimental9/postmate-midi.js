@@ -231,9 +231,8 @@ function getMidiEventName(i) { // for debug
 //  必要に応じてsynth js側でそれらを上書きしてよい。
 //  注意、ただしnote onと、セットとなるnote offだけは、synth js側で実装必須とする。そうしないとsynth jsソースだけ見たとき鳴らし方がわからず、ソースが読みづらいため。
 postmateMidi.tonejs.initTonejsByUserAction = () => {
-  if (postmateMidi.tonejs.isStartTone && Tone.context.state === "running") return; // iPadだけ他の環境と挙動が異なり、stateがrunningにならないことがあるので、対策用。
-    // 備忘、if (Tone.context.state === "running") return; だと、ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
-    // 備忘、if (postmateMidi.tonejs.isStartTone) return; だと、iPadだけ他の環境と挙動が異なり、stateがrunningにならないことがあるので、対策が必要と判断した。
+  if (postmateMidi.tonejs.isStartTone) return;
+    // ↑ 備忘、if (Tone.context.state === "running") return; だと、ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
 
   async () => {
     await Tone.start();
@@ -244,8 +243,10 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
   synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
   synth.triggerRelease(Tone.Midi(69).toFrequency());
 
-  postmateMidi.tonejs.isStartTone = true;
-  postmateMidi.ui.checkRemovePlayButton();
+  if (Tone.context.state === "running") { // 条件をrunningにするのは、iPad対策用。iPadだけ他の環境と挙動が異なり、ここまで到達してもrunningにならないことがある（pointerdownによる到達の場合）。そのための対策用。
+    postmateMidi.tonejs.isStartTone = true;
+    postmateMidi.ui.checkRemovePlayButton(); // playボタンをremoveするのは、iPad向けの仮想キーボード等用。仮想キーボード等においてはiPad対策で音を鳴らすためのユーザーアクション用のplayボタン表示が必須となる。音が鳴ればplayボタンは役目が完了するのでremoveして見た目をわかりやすくする用。
+  }
 }
 
 postmateMidi.tonejs.initBaseTimeStampAudioContext = () => {
