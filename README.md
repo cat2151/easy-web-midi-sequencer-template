@@ -91,13 +91,7 @@
 ## Experimental9
 - [Demo Experimental9 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9/)
 - Postmate + Tone.js + 疑似midimessage + 簡易仮想MIDIキーボード で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
-- iPadで鳴らない問題の調査用：
-    - [10-window-no-pointer](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9//10-window-no-pointer)
-    - [20-window-pointer](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9//20-window-pointer)
-    - [30-body-pointer](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9//30-body-pointer)
-    - [40-body-no-pointer](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9//40-body-no-pointer)
-    - [50-div-pointer](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9//50-div-pointer)
-    - [60-div-no-pointer](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental9//60-div-no-pointer)
+- iPadだけはplayボタン必須。それ以外はplayボタンなしで、mouseやtouchで音が鳴ります。
 
 ## 当projectが目指すこと
 - `MIDI OUT` する

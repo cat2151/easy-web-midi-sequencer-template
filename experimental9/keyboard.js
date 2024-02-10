@@ -15,7 +15,7 @@ const elm = window; // windowの場合は、childの下の空白をpointして�
 // pointer (mouse or touch device)
 // シンプル優先で、mousedownやtouchstartでなく、これを使う。 → pointercancelが意図しないタイミングで発生したため、やむなくtouchも併用する。
 elm.addEventListener("pointerdown", (ev) => {
-  if (kb.isTouch) return;
+  if (kb.isTouch) return; // iPadやAndroidで意図せぬ発音処理をさせない用（タッチ後にタップでmouseイベントが発生してここに到達する）
   const x = Math.floor(ev.clientX);
   console.log("pointerdown", ev, x);
   onmousedownOrTouchStart(x);
@@ -42,31 +42,8 @@ elm.addEventListener("blur", (ev) => { // ALT+TAB等で発生する
   allNoteOff();
 });
 
-//////////////
-//// mouse
-//// PCで到達する
-//elm.addEventListener("mousedown", (ev) => {
-//  if (kb.isTouch || kb.isPoint) return; // iPadやAndroidで意図せぬ発音処理をさせない用（タッチ後にタップでmouseイベントが発生してここに到達する）
-//  const x = ev.clientX;
-//  console.log("mousedown", `x:${x} y:${ev.clientY}`)
-//  onmousedownOrTouchStart(x);
-//});
-//elm.addEventListener("mouseup", (ev) => {
-//  if (kb.isTouch || kb.isPoint) return;
-//  console.log("mouseup");
-//  onmouseupOrTouchEnd();
-//});
-//elm.addEventListener("mousemove", (ev) => {
-//  if (kb.isTouch || kb.isPoint) return;
-//  console.log("mousemove")
-//  const x = ev.clientX;
-//  onmousemoveOrTouchMove(x);
-//});
-//
-
 ///////////////////
 // touch device
-// Androidで到達する
 elm.addEventListener("touchstart", (ev) => {
   kb.isTouch = true;
   const x = Math.floor(ev.changedTouches[0].clientX);
@@ -221,9 +198,9 @@ function checkAndSend(fnc, noteNum) {
         これらの処理をアプリごとに毎回書くのは手間なので、ライブラリ化して利用する
     */
 
-    if (kb.isIpad()) return;
+    if (kb.isIpad()) return; // iPadはplayボタンでのみWeb Audioを初期化するので
 
-    kb.initOnStartPlaying();
+    kb.initOnStartPlaying(); // Web Audioを初期化する用
 
     (async () => {
       let i = 0;
