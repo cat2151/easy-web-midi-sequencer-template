@@ -5,6 +5,6 @@ postmateMidi.seq.registerSeq(sq);
 postmateMidi.ui.registerPlayButton('button', sq.togglePlay);
 
 import { initSynth } from "./synth-poly.js";
-initSynth(postmateMidi.tonejs, {oscillator: {type: 'sawtooth'}});
+initSynth(postmateMidi.tonejs, {oscillator: {type: 'triangle'}});
 
 console.log(`postmate-midi parent:`, postmateMidi);

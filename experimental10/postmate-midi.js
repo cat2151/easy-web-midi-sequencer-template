@@ -46,7 +46,11 @@ postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, t
       });
       child.on('onmidimessage' + (childId + 1), data => {
         console.log(`parent : onmidimessage : from ${childName} : received data : [${data}]`);
-        onmidimessage(data);
+        // onmidimessage(data);
+
+        // seq + knob + synth の構成用、ひとまず、child1 or child2からparentにsendされたmidiは、決め打ちで、今度はparentからchild2にsendする
+        // TODO 今後は、child1かchild2を選べるようにする、registerParent時に配列で受け取る
+        sendMidiMessage(data[0], data[1]);
       });
 
       // childとの双方向通信のtest用
@@ -208,7 +212,8 @@ function initOnStartPlaying() {
   // seqから呼ばれ、synth側のbaseTimeStampを更新する用
   if (isParent()) {
     console.log(`${getParentOrChild()} : call onStartPlaying`);
-    postmateMidi.children[0].call('onStartPlaying');
+    const destChildId = 1;
+    postmateMidi.children[destChildId].call('onStartPlaying');
   }
   if (isChild()) {
     console.log(`${getParentOrChild()} : emit onStartPlaying`);
@@ -224,11 +229,18 @@ function onStartPlaying(data) {
 }
 
 function sendMidiMessage(events, playTime) {
+  // 外部sqやkbから直接呼ばれる
   if (isParent()) {
-    postmateMidi.children[0].call('onmidimessage', [events, playTime]);
+    // TODO 今後、parentがどのchildにsendするかの配列をpostmateMidiに持たせて、fan（複数childに並列send）可能にして、layer演奏可能にする等も想定する
+    //  それはregisterParent時に引数で配列で受け取る想定、それはindex.htmlでcheckbox等のUIで選択可能にする想定
+
+    // ひとまず、parent seq を、child2 synth にsendする
+    const destChildId = 1;
+    postmateMidi.children[destChildId].call('onmidimessage', [events, playTime]);
     return;
   }
   if (isChild()) {
+    // childからは、必ずparentにsendする。parentのon onmidimessageにて、改めてsendMidiMessageする
     postmateMidi.parent.emit('onmidimessage' + (postmateMidi.childId + 1), [events, playTime]);
     return;
   }
@@ -241,8 +253,8 @@ function onmidimessage(data) {
   const baseMsec = postmateMidi.tonejs.baseTimeStampAudioContext * 1000;
   let timestamp = (baseMsec + playTimeMsec + ofsMsec) / 1000;
   if (isNaN(timestamp)) timestamp = undefined; // NaNのときnoteOnされないのを防止する用
-  // console.log(`synth: ${getMidiEventName(events[0][0])} ${Math.floor((timestamp - Tone.now()) * 1000)}`); // ofsMsecのチューニング用
-  if (timestamp - Tone.now() < 0) alert(); // timestampが過去になっていないことをチェック
+  console.log(`${getParentOrChild()} : synth : ${getMidiEventName(events[0][0])} ${events[0][1]} ${Math.floor((timestamp - Tone.now()) * 1000)}`); // ofsMsecのチューニング用
+  // if (timestamp - Tone.now() < 0) alert(); // timestampが過去になっていないことをチェック
   for (const event of events) {
     switch (event[0]) {
     // note on
@@ -309,7 +321,8 @@ function afterTonejsStart() {
   postmateMidi.tonejs.isStartTone = true;
   if (isParent()) {
     postmateMidi.tonejs.isStartToneParent = true;
-    postmateMidi.children[0].call('onSynthReady'); // parentの状態をchildに伝える用
+    const destChildId = 1;
+    postmateMidi.children[destChildId].call('onSynthReady'); // parentの状態をchildに伝える用
   }
   if (isChild()) {
     postmateMidi.tonejs.isStartToneChild = true;

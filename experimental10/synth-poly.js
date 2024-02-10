@@ -12,6 +12,7 @@ function initSynth(s, synthParam) {
   s.noteOn = noteOn;
   s.noteOff = noteOff;
   s.synth = synth;
+  s.controlChange[74] = cutoff;
 
   function noteOn(noteNum, timestamp) {
     synth.triggerAttack(Tone.Midi(noteNum).toFrequency(), timestamp);
@@ -19,6 +20,11 @@ function initSynth(s, synthParam) {
 
   function noteOff(noteNum, timestamp) {
     synth.triggerRelease(Tone.Midi(noteNum).toFrequency(), timestamp);
+  };
+
+  function cutoff(v) {
+    v *= 40; // 0～5120Hz
+    filter.set({frequency: v});
   };
 }
 
