@@ -1,6 +1,6 @@
 // usage : parent.js / child.js を参照ください
 const postmateMidi = { parent: null, child: null,
-  ui: { registerPlayButton: null },
+  ui: { registerPlayButton: null, isIpad },
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
   tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [] } };
 
@@ -29,6 +29,9 @@ postmateMidi.registerParent = function(url, textareaSelector, textareaSeqFnc, te
     });
     child.on('onStartPlaying', data => {
       onStartPlaying(data);
+    });
+    child.on('onSynthReady', data => {
+      onSynthReady(data);
     });
     child.on('onmidimessage', data => {
       onmidimessage(data);
@@ -65,6 +68,7 @@ postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textarea
     onCompleteHandshakeParent,
     onChangeParentTextarea,
     onStartPlaying,
+    onSynthReady,
     onmidimessage
   });
 
@@ -167,7 +171,9 @@ postmateMidi.seq.registerSeq = (sq) => {
   postmateMidi.seq = sq;
   postmateMidi.seq.sendMidiMessage = sendMidiMessage;       // 外部sq側から使う用
   postmateMidi.seq.initOnStartPlaying = initOnStartPlaying; // 〃
-  postmateMidi.seq.getSynthReady = () => { return postmateMidi.tonejs.isStartTone; } // 〃
+  postmateMidi.seq.isIpad = isIpad;                         // 〃
+  postmateMidi.seq.isSynthReady = () => { return postmateMidi.tonejs.isStartTone; } // 〃
+  postmateMidi.seq.isAllSynthReady = () => { return postmateMidi.tonejs.isStartToneParent && postmateMidi.tonejs.isStartToneChild; } // 〃
 }
 
 function initOnStartPlaying() {
@@ -246,7 +252,48 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
 
   if (Tone.context.state === "running") { // 条件をrunningにするのは、iPad対策用。iPadだけ他の環境と挙動が異なり、ここまで到達してもrunningにならないことがある（pointerdownによる到達の場合）。そのための対策用。
     postmateMidi.tonejs.isStartTone = true;
-    postmateMidi.ui.checkRemovePlayButton(); // playボタンをremoveするのは、iPad向けの仮想キーボード等用。仮想キーボード等においてはiPad対策で音を鳴らすためのユーザーアクション用のplayボタン表示が必須となる。音が鳴ればplayボタンは役目が完了するのでremoveして見た目をわかりやすくする用。
+    console.log(`${getParentOrChild()} : Tone.js state running`)
+    if (isParent()) {
+      postmateMidi.tonejs.isStartToneParent = true;
+      postmateMidi.child.call('onSynthReady'); // parentの状態をchildに伝える用
+    }
+    if (isChild()) {
+      postmateMidi.tonejs.isStartToneChild = true;
+      postmateMidi.parent.emit('onSynthReady');
+    }
+    if (!isIpad()) {
+      postmateMidi.ui.checkRemovePlayButton();
+    }
+    checkAllSynthReady();
+  }
+}
+
+function onSynthReady() {
+  if (isParent()) {
+    postmateMidi.tonejs.isStartToneChild = true; // message from child
+  }
+  if (isChild()) {
+    postmateMidi.tonejs.isStartToneParent = true; // message from parent
+  }
+  checkAllSynthReady();
+}
+
+function isIpad() {
+  const ua = window.navigator.userAgent.toLowerCase();
+  // console.log(`userAgent : ${ua}`);
+  if (ua.indexOf('ipad') !== -1 || ua.indexOf('macintosh') !== -1 ) {
+    // console.log("playボタン必須。でないと音が鳴らない系")
+    return true;
+  } else {
+    // console.log("mouseやtouchだけで音が鳴る系")
+    return false;
+  }
+}
+
+function checkAllSynthReady() {
+  if (postmateMidi.seq.isAllSynthReady()) {
+    console.log(`${getParentOrChild()} : parent synth and child synth ready`)
+    if (isIpad()) postmateMidi.ui.checkRemovePlayButton(); // playボタンをremoveするのは、iPad向けの仮想キーボード等用。仮想キーボード等においてはiPad対策で音を鳴らすためのユーザーアクション用のplayボタン表示が必須となる。音が鳴ればplayボタンは役目が完了するのでremoveして見た目をわかりやすくする用。
   }
 }
 

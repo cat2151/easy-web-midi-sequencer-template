@@ -13,32 +13,31 @@ const elm = window; // windowの場合は、childの下の空白をpointして�
 
 ////////////////////////////////////
 // pointer (mouse or touch device)
-// PCで到達する。PCのChrome DevToolsのDevice modeのiPad simulateで到達する。実機iPadとAndroidで到達するかは未確認。
-// シンプル優先で、mousedownやtouchstartは使わず、全環境で動作するかテストする。
+// シンプル優先で、mousedownやtouchstartでなく、これを使う。
 elm.addEventListener("pointerdown", (ev) => {
-  if (kb.isTouch) return;
-  kb.isPoint = true;
   const x = Math.floor(ev.clientX);
   console.log("pointerdown", ev, x);
   onmousedownOrTouchStart(x);
 });
 elm.addEventListener("pointermove", (ev) => {
-  if (kb.isTouch) return;
-  kb.isPoint = true;
-  console.log("pointermove")
+  // console.log("pointermove");
   const x = ev.clientX;
   onmousemoveOrTouchMove(x);
 });
 elm.addEventListener("pointercancel", (ev) => { // 発生未確認。ALT+TABでは発生しなかった。
-  if (kb.isTouch) return;
-  kb.isPoint = true;
   console.log("pointercancel");
   onmouseupOrTouchEnd();
 });
 elm.addEventListener("pointerup", (ev) => {
-  if (kb.isTouch) return;
-  kb.isPoint = true;
   console.log("pointerup");
+  onmouseupOrTouchEnd();
+});
+elm.addEventListener("blur", (ev) => { // ALT+TAB等で発生する
+  console.log("blur");
+  allNoteOff();
+});
+elm.addEventListener("touchcancel", (ev) => { // for touch device. PCのdevToolsで確認した。ALT+TAB等で発生する。
+  console.log("touchcancel");
   onmouseupOrTouchEnd();
 });
 
@@ -61,10 +60,6 @@ elm.addEventListener("pointerup", (ev) => {
 //  console.log("mousemove")
 //  const x = ev.clientX;
 //  onmousemoveOrTouchMove(x);
-//});
-//elm.addEventListener("blur", (ev) => { // ALT+TAB等で発生する
-//  console.log("blur");
-//  allNoteOff();
 //});
 //
 /////////////////////
@@ -164,7 +159,7 @@ function getPenta(noteNum) {
   const octave = Math.floor(noteNum / 12);
   const semitone = noteNum % 12;
   const result = octave * 12 + semitone2penta(semitone);
-  console.log(octave, semitone, result);
+  // console.log(octave, semitone, result);
   return result;
   function semitone2penta(semitone) {
     // minor penta
@@ -188,26 +183,41 @@ function getPenta(noteNum) {
 ////////
 // MIDI
 function noteOn(noteNum) {
-  if (!checkInitSynth()) return;
+  if (!isSynthReady()) return;
   noteNum += kb.keyShift;
   kb.sendMidiMessage([[0x90, noteNum, 127]]);
 }
 function noteOff(noteNum) {
-  if (!checkInitSynth()) return;
+  if (!isSynthReady()) return;
   noteNum += kb.keyShift;
   kb.sendMidiMessage([[0x80, noteNum, 127]]);
 }
 function allNoteOff() {
-  if (!checkInitSynth()) return;
+  if (!isSynthReady()) return;
   kb.sendMidiMessage([new Uint8Array([0xB0, 0x7B, 0])]);
 }
 
-function checkInitSynth() {
-  const ready = kb.getSynthReady(); // iPadは他の環境と異なり、playボタンを押さずにWeb Audioを呼び続けると最終的にplayボタンを押しても一切音が鳴らなくなりユーザーが混乱するため、playボタンを押していないときはWeb Audioを一切呼ばないようにする、という対策用。
-  if (!ready) {
-    kb.initOnStartPlaying();
+function isSynthReady() {
+  /*
+  iPadブラウザ問題
+    iPadブラウザは他の環境と異なり、
+      playボタンを押さないとWeb Audioから音を出せない
+      playボタンを押さずにWeb Audioを呼び続けると、playボタンを押しても音が鳴らなくなる。体験としては、playボタンに気づかずにしばらくタップやスワイプするとplayボタンを押しても音が鳴らなくなりユーザーが混乱する。
+    対策
+      iPadブラウザは、
+        playボタンを用意する
+        playボタンで、Web Audioを初期化する。複数webpageのsynthが対象の場合は全て初期化する
+        playボタンを押す前は、Web Audioを一切呼ばないようにする
+      これらの処理をアプリごとに毎回書くのは手間なので、ライブラリ化して利用する
+  */
+  if (kb.isIpad()) {
+    return kb.isAllSynthReady();
+  } else {
+    if (!kb.isSynthReady) {
+      kb.initOnStartPlaying();
+    }
+    return kb.isSynthReady;
   }
-  return ready;
 }
 
 export { kb };
