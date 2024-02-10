@@ -2,7 +2,7 @@
 const postmateMidi = { parent: null, child: null,
   ui: { registerPlayButton: null, isIpad },
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
-  tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [] } };
+  tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [], initTonejsByUserAction: null } };
 
 postmateMidi.registerParent = function(url, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
@@ -249,6 +249,20 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
   const synth = postmateMidi.tonejs.synth;
   synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
   synth.triggerRelease(Tone.Midi(69).toFrequency());
+
+  // iPadで1回目のplayボタン押下ではrunning到達せず、2回目で到達するので、ユーザーが混乱する問題、の対策用に、試す用
+  if (isIpad()) {
+    const t0 = performance.now();
+    let oldSec = 0;
+    while (Tone.context.state !== "running") {
+      const t = performance.now();
+      const sec = Math.floor((t - t0) / 1000);
+      if (sec != oldSec) {
+        console.log(`${sec}`);
+        oldSec = sec;
+      }
+    }
+  }
 
   if (Tone.context.state === "running") { // 条件をrunningにするのは、iPad対策用。iPadだけ他の環境と挙動が異なり、ここまで到達してもrunningにならないことがある（pointerdownによる到達の場合）。そのための対策用。
     postmateMidi.tonejs.isStartTone = true;
