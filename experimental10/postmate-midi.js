@@ -1,62 +1,64 @@
 // usage : parent.js / child.js を参照ください
-const postmateMidi = { parent: null, child: null,
+const postmateMidi = { parent: null, children: [],
   ui: { registerPlayButton: null, isIpad },
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
   tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [], initTonejsByUserAction: null } };
 
-postmateMidi.registerParent = function(url, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
+  for (let childId = 0; childId < urls.length; childId++) {
 
-  const handshake = new Postmate({
-    url
-  });
-
-  handshake.then(child => {
-    console.log('parent : handshake is complete');
-    child.call('onCompleteHandshakeParent', '"Hello, World!" by parent');
-
-    child.get('height')
-    .then(height => child.frame.style.height = `${height * 1.5}px`);
-      // ↑ 見切れる。原因不明。取り急ぎ height * 1.5 した
-
-    // Listen to a particular event from the child
-    child.on('onCompleteHandshakeChild', data => {
-      console.log(`parent : onCompleteHandshakeChild : received data : [${data}]`);
-    });
-    child.on('onChangeChildTextarea', data => {
-      console.log(`parent : onChangeChildTextarea : received data : [${data}]`);
-      ui.textarea.value = data;
-    });
-    child.on('onStartPlaying', data => {
-      onStartPlaying(data);
-    });
-    child.on('onSynthReady', data => {
-      onSynthReady(data);
-    });
-    child.on('onmidimessage', data => {
-      onmidimessage(data);
+    const handshake = new Postmate({
+      url: urls[childId]
     });
 
-    // childとの双方向通信のtest用
-    if (textareaSelector) {
-      ui.textarea = document.querySelector(textareaSelector);
-      ui.textarea.addEventListener("input", onChangeTextarea);
-      if (textareaTemplateDropDownListSelector) {
-        setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc);
-      }
+    handshake.then(child => {
+      console.log('parent : handshake is complete');
+      child.call('onCompleteHandshakeParent', '"Hello, World!" by parent');
 
-      function onChangeTextarea() {
-        if (textareaSeqFnc) {
-          textareaSeqFnc(ui.textarea.value);
-        } else {
-          console.log(`parent : onChangeTextarea : call data : [${ui.textarea.value}]`);
-          child.call('onChangeParentTextarea', ui.textarea.value);
+      child.get('height')
+      .then(height => child.frame.style.height = `${height * 1.5}px`);
+        // ↑ 見切れる。原因不明。取り急ぎ height * 1.5 した
+
+      // Listen to a particular event from the child
+      child.on('onCompleteHandshakeChild', data => {
+        console.log(`parent : onCompleteHandshakeChild : received data : [${data}]`);
+      });
+      child.on('onChangeChildTextarea', data => {
+        console.log(`parent : onChangeChildTextarea : received data : [${data}]`);
+        ui.textarea.value = data;
+      });
+      child.on('onStartPlaying', data => {
+        onStartPlaying(data);
+      });
+      child.on('onSynthReady', data => {
+        onSynthReady(data);
+      });
+      child.on('onmidimessage', data => {
+        onmidimessage(data);
+      });
+
+      // childとの双方向通信のtest用
+      if (textareaSelector) {
+        ui.textarea = document.querySelector(textareaSelector);
+        ui.textarea.addEventListener("input", onChangeTextarea);
+        if (textareaTemplateDropDownListSelector) {
+          setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc);
+        }
+
+        function onChangeTextarea() {
+          if (textareaSeqFnc) {
+            textareaSeqFnc(ui.textarea.value);
+          } else {
+            console.log(`parent : onChangeTextarea : call data : [${ui.textarea.value}]`);
+            child.call('onChangeParentTextarea', ui.textarea.value);
+          }
         }
       }
-    }
 
-    postmateMidi.child = child;
-  });
+      postmateMidi.children[childId] = child;
+    });
+  }
 }
 
 postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
@@ -108,7 +110,7 @@ postmateMidi.registerChild = function(textareaSelector, textareaSeqFnc, textarea
 }
 
 function isParent() {
-  return Boolean(postmateMidi.child); // childを持っているならparent。code中に if (postmateMidi.child) があると、isChildの意味と混同してミスしたので、防止用にisを用意した。
+  return Boolean(postmateMidi.children.length); // childを持っているならparent。code中に if (postmateMidi.children[0]) があると、isChildの意味と混同してミスしたので、防止用にisを用意した。
 }
 function isChild() {
   return Boolean(postmateMidi.parent); // parentを持っているならchild
@@ -194,7 +196,7 @@ function initOnStartPlaying() {
   // seqから呼ばれ、synth側のbaseTimeStampを更新する用
   if (isParent()) {
     console.log(`${getParentOrChild()} : call onStartPlaying`);
-    postmateMidi.child.call('onStartPlaying');
+    postmateMidi.children[0].call('onStartPlaying');
   }
   if (isChild()) {
     console.log(`${getParentOrChild()} : emit onStartPlaying`);
@@ -211,7 +213,7 @@ function onStartPlaying(data) {
 
 function sendMidiMessage(events, playTime) {
   if (isParent()) {
-    postmateMidi.child.call('onmidimessage', [events, playTime]);
+    postmateMidi.children[0].call('onmidimessage', [events, playTime]);
     return;
   }
   if (isChild()) {
@@ -295,7 +297,7 @@ function afterTonejsStart() {
   postmateMidi.tonejs.isStartTone = true;
   if (isParent()) {
     postmateMidi.tonejs.isStartToneParent = true;
-    postmateMidi.child.call('onSynthReady'); // parentの状態をchildに伝える用
+    postmateMidi.children[0].call('onSynthReady'); // parentの状態をchildに伝える用
   }
   if (isChild()) {
     postmateMidi.tonejs.isStartToneChild = true;
