@@ -9,5 +9,4 @@ if (!postmateMidi.ui.isIpad()) { postmateMidi.ui.button.remove(); }
 import { initSynth } from "./synth-poly.js";
 initSynth(postmateMidi.tonejs, {oscillator: {type: 'sawtooth'}});
 
-console.log(`postmate-midi parent:`);
-console.log(postmateMidi);
+console.log(`postmate-midi parent:`, postmateMidi);

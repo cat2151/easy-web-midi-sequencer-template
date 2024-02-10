@@ -1,6 +1,6 @@
 // 用途 : 簡易仮想MIDIキーボードのtest用
 // usage : parent.js / child.js の import "./keyboard.js"; 付近を参照ください
-const kb = { mouseNoteNums: [], mouseLastNoteNum: null, keyboardNoteNums: [], keyShift: 0, isTouch: false, isPoint: false };
+const kb = { mouseNoteNums: [], mouseLastNoteNum: null, keyboardNoteNums: [], keyShift: 0, isTouch: false };
 
 kb.init = (keyShift) => {
   kb.keyShift = keyShift; // parent / child から個別の値を指定して呼び出す用
@@ -13,32 +13,33 @@ const elm = window; // windowの場合は、childの下の空白をpointして�
 
 ////////////////////////////////////
 // pointer (mouse or touch device)
-// シンプル優先で、mousedownやtouchstartでなく、これを使う。
+// シンプル優先で、mousedownやtouchstartでなく、これを使う。 → pointercancelが意図しないタイミングで発生したため、やむなくtouchも併用する。
 elm.addEventListener("pointerdown", (ev) => {
+  if (kb.isTouch) return;
   const x = Math.floor(ev.clientX);
   console.log("pointerdown", ev, x);
   onmousedownOrTouchStart(x);
 });
 elm.addEventListener("pointermove", (ev) => {
+  if (kb.isTouch) return;
   // console.log("pointermove");
   const x = ev.clientX;
   onmousemoveOrTouchMove(x);
 });
-elm.addEventListener("pointercancel", (ev) => { // 発生未確認。ALT+TABでは発生しなかった。
+elm.addEventListener("pointercancel", (ev) => { // PC Chrome DevTools iPad emulator にて、mouseを少し動かすだけで発生した。これではiPadのtestができない。対策として、touch検出時はtouchを優先して使うようにした。
+  if (kb.isTouch) return;
   console.log("pointercancel");
   onmouseupOrTouchEnd();
 });
 elm.addEventListener("pointerup", (ev) => {
+  if (kb.isTouch) return;
   console.log("pointerup");
   onmouseupOrTouchEnd();
 });
+
 elm.addEventListener("blur", (ev) => { // ALT+TAB等で発生する
   console.log("blur");
   allNoteOff();
-});
-elm.addEventListener("touchcancel", (ev) => { // for touch device. PCのdevToolsで確認した。ALT+TAB等で発生する。
-  console.log("touchcancel");
-  onmouseupOrTouchEnd();
 });
 
 //////////////
@@ -62,31 +63,32 @@ elm.addEventListener("touchcancel", (ev) => { // for touch device. PCのdevTools
 //  onmousemoveOrTouchMove(x);
 //});
 //
-/////////////////////
-//// touch device
-//// Androidで到達する
-//elm.addEventListener("touchstart", (ev) => {
-//  kb.isTouch = true;
-//  const x = Math.floor(ev.changedTouches[0].clientX);
-//  console.log("touchstart", ev, x);
-//  onmousedownOrTouchStart(x);
-//});
-//elm.addEventListener("touchmove", (ev) => {
-//  kb.isTouch = true;
-//  const x = Math.floor(ev.changedTouches[0].clientX);
-//  console.log("touchmove", ev, x, window.innerWidth);
-//  onmousemoveOrTouchMove(x);
-//});
-//elm.addEventListener("touchcancel", (ev) => { // ALT+TAB等で発生する
-//  kb.isTouch = true;
-//  console.log("touchcancel");
-//  onmouseupOrTouchEnd();
-//});
-//elm.addEventListener("touchend", (ev) => {
-//  kb.isTouch = true;
-//  console.log("touchend", ev);
-//  onmouseupOrTouchEnd();
-//});
+
+///////////////////
+// touch device
+// Androidで到達する
+elm.addEventListener("touchstart", (ev) => {
+  kb.isTouch = true;
+  const x = Math.floor(ev.changedTouches[0].clientX);
+  console.log("touchstart", ev, x);
+  onmousedownOrTouchStart(x);
+});
+elm.addEventListener("touchmove", (ev) => {
+  kb.isTouch = true;
+  const x = Math.floor(ev.changedTouches[0].clientX);
+  // console.log("touchmove", ev, x, window.innerWidth);
+  onmousemoveOrTouchMove(x);
+});
+elm.addEventListener("touchcancel", (ev) => { // ALT+TAB等で発生する
+  kb.isTouch = true;
+  console.log("touchcancel");
+  onmouseupOrTouchEnd();
+});
+elm.addEventListener("touchend", (ev) => {
+  kb.isTouch = true;
+  console.log("touchend", ev);
+  onmouseupOrTouchEnd();
+});
 
 ////////////////////
 // mouse or touch
@@ -183,40 +185,63 @@ function getPenta(noteNum) {
 ////////
 // MIDI
 function noteOn(noteNum) {
-  if (!isSynthReady()) return;
+  checkAndSend(sendNoteOn, noteNum);
+}
+function noteOff(noteNum) {
+  checkAndSend(sendNoteOff, noteNum);
+}
+function allNoteOff(noteNum) {
+  checkAndSend(sendAllNoteOff, noteNum);
+}
+function sendNoteOn(noteNum) {
   noteNum += kb.keyShift;
   kb.sendMidiMessage([[0x90, noteNum, 127]]);
 }
-function noteOff(noteNum) {
-  if (!isSynthReady()) return;
+function sendNoteOff(noteNum) {
   noteNum += kb.keyShift;
   kb.sendMidiMessage([[0x80, noteNum, 127]]);
 }
-function allNoteOff() {
-  if (!isSynthReady()) return;
+function sendAllNoteOff() {
   kb.sendMidiMessage([new Uint8Array([0xB0, 0x7B, 0])]);
 }
 
-function isSynthReady() {
-  /*
-  iPadブラウザ問題
-    iPadブラウザは他の環境と異なり、
-      playボタンを押さないとWeb Audioから音を出せない
-      playボタンを押さずにWeb Audioを呼び続けると、playボタンを押しても音が鳴らなくなる。体験としては、playボタンに気づかずにしばらくタップやスワイプするとplayボタンを押しても音が鳴らなくなりユーザーが混乱する。
-    対策
-      iPadブラウザは、
-        playボタンを用意する
-        playボタンで、Web Audioを初期化する。複数webpageのsynthが対象の場合は全て初期化する
-        playボタンを押す前は、Web Audioを一切呼ばないようにする
-      これらの処理をアプリごとに毎回書くのは手間なので、ライブラリ化して利用する
-  */
-  if (kb.isIpad()) {
-    return kb.isAllSynthReady();
+function checkAndSend(fnc, noteNum) {
+  if (!kb.isAllSynthReady()) {
+
+    /*
+    iPadブラウザ問題
+      iPadブラウザは他の環境と異なり、
+        playボタンを押さないとWeb Audioから音を出せない
+        playボタンを押さずにWeb Audioを呼び続けると、playボタンを押しても音が鳴らなくなる。体験としては、playボタンに気づかずにしばらくタップやスワイプするとplayボタンを押しても音が鳴らなくなりユーザーが混乱する。
+      対策
+        iPadブラウザは、
+          playボタンを用意する
+          playボタンで、Web Audioを初期化する。複数webpageのsynthが対象の場合は全て初期化する
+          playボタンを押す前は、Web Audioを一切呼ばないようにする
+        これらの処理をアプリごとに毎回書くのは手間なので、ライブラリ化して利用する
+    */
+
+    if (kb.isIpad()) return;
+
+    kb.initOnStartPlaying();
+
+    (async () => {
+      let i = 0;
+      while (true) {
+        const sleep = msec => new Promise(resolve => setTimeout(resolve, msec));
+        await sleep(16);
+        if (kb.isAllSynthReady()) { // PCで、mousedownしてsynth側の準備ができたらそのまま音を鳴らす用
+          fnc(noteNum);
+          break;
+        }
+        if (i++ > 60) {
+          console.log(`${fnc.name} : 時間切れ`);
+          break;
+        }
+      }
+    })();
   } else {
-    if (!kb.isSynthReady) {
-      kb.initOnStartPlaying();
-    }
-    return kb.isSynthReady;
+    fnc(noteNum);
   }
 }
 
