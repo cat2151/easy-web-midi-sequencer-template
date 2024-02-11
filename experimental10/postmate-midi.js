@@ -6,9 +6,10 @@ const postmateMidi = {
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
   tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [], initTonejsByUserAction: null } };
 
-postmateMidi.registerParent = function(urls, midiOutputIds, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
-  postmateMidi.midiOutputIds = midiOutputIds;
+  const urls = urlParams.urls;
+  postmateMidi.midiOutputIds = urlParams.midiOutputIds;
   let isCompleteHandshake;
   (async () => {
     for (let childId = 0; childId < urls.length; childId++) {
@@ -29,8 +30,12 @@ postmateMidi.registerParent = function(urls, midiOutputIds, textareaSelector, te
   function doHandshake(childId) {
     const childName = `child${childId + 1}(${urls[childId]})`;
     console.log(`parent : start handshake to ${childName}`);
+
+    const baseUrl = urls[childId];
+    const urlParams = rison2.stringify({ childId }); // risonの用途は、URLを常時読みやすくして開発効率化する用
+    const url = `${baseUrl}?query=${urlParams}`;
     const handshake = new Postmate({
-      url: urls[childId]
+      url
     });
 
     handshake.then(child => {
@@ -90,8 +95,9 @@ postmateMidi.registerParent = function(urls, midiOutputIds, textareaSelector, te
   }
 }
 
-postmateMidi.registerChild = function(childId, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+postmateMidi.registerChild = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
+  const childId = urlParams.childId;
 
   const handshake = new Postmate.Model({
     // Expose your model to the Parent. Property values may be functions, promises, or regular values
@@ -207,6 +213,27 @@ function isIpad() {
     // console.log("mouseやtouchだけで音が鳴る系")
     return false;
   }
+}
+
+postmateMidi.ui.visualizeCurrentSound = visualizeCurrentSound;
+function visualizeCurrentSound() {
+  const analyser = new Tone.Analyser("waveform", 256);
+  Tone.Master.connect(analyser);
+  const canvas = document.createElement("canvas");
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  Tone.Transport.scheduleRepeat(() => {
+    const waveform = analyser.getValue();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    for (let i = 0; i < waveform.length; i++) {
+      const x = (i / waveform.length) * canvas.width;
+      const y = (0.5 - waveform[i]) * canvas.height;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }, "5hz");
+  Tone.Transport.start();
 }
 
 //////////
