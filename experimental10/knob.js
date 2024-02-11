@@ -101,38 +101,27 @@ function getMouseNoteNum(x) {
 /////////////
 // keyboard
 onkeydown = (event) => {
-  const noteNum = getPenta(getKeyboardNoteNum(event.code));
+  const noteNum = getKeyboardNoteNum(event.code);
   console.log("onkeydown", event.code, noteNum)
   if (noteNum < 0) return;
   if (kb.keyboardNoteNums[noteNum]) return;
   kb.keyboardNoteNums[noteNum] = true;
-  noteOn(noteNum);
+  // noteOn(noteNum);
+  cc74(noteNum);
 };
 onkeyup = (event) => {
-  const noteNum = getPenta(getKeyboardNoteNum(event.code));
+  const noteNum = getKeyboardNoteNum(event.code);
   console.log("onkeyup", event.code, noteNum)
   if (noteNum < 0) return;
-  noteOff(noteNum);
+  // noteOff(noteNum);
+  cc74(noteNum);
   kb.keyboardNoteNums[noteNum] = false;
 };
 
 function getKeyboardNoteNum(key) {
   const i = "ASDFGHJKL".indexOf(key.replace("Key", ""));
   if (i < 0) return i;
-  return 60 + i2penta(i);
-  function i2penta(i) {
-    switch (i) {
-      case  0: return  0;
-      case  1: return  3;
-      case  2: return  5;
-      case  3: return  7;
-      case  4: return 10;
-      case  5: return 12 + 0;
-      case  6: return 12 + 3;
-      case  7: return 12 + 5;
-      case  8: return 12 + 7;
-    }
-  }
+  return 8 + i * 8;
 }
 
 ////////
