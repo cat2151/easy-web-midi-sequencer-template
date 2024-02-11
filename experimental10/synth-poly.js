@@ -23,9 +23,14 @@ function initSynth(s, synthParam) {
   };
 
   function cutoff(v) {
-    v *= 40; // 0～5120Hz
-    filter.set({frequency: v});
+    const mul = v2mul(90 + v * 0.5);
+    const hz = 200 + mul;
+    console.log(`cutoff : v:${v} -> Hz:${Math.floor(hz)}`);
+    filter.set({frequency: hz});
   };
+  function v2mul(v) {
+    return Math.pow(2, 1 / 12 * v);
+  }
 }
 
 export { initSynth };

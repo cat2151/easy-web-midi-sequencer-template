@@ -6,10 +6,20 @@ const postmateMidi = { parent: null, children: [], childId: null,
 
 postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
+  let isCompleteHandshake;
   (async () => {
     for (let childId = 0; childId < urls.length; childId++) {
+      isCompleteHandshake = false;
       doHandshake(childId);
-      /*sleep*/await new Promise(resolve => setTimeout(resolve, 500)); // child2.jsのwaitに合わせること
+      let i = 0;
+      while (!isCompleteHandshake) {
+        /*sleep*/await new Promise(resolve => setTimeout(resolve, 16));
+        if (i++ > 60) {
+          console.log(`child${childId + 1} : handshake : 時間切れ`);
+          break;
+        }
+      }
+      /*sleep*/await new Promise(resolve => setTimeout(resolve, 100)); // 次のchildとのhandshakeを成功させる用。handshake成功のちさらにwaitが必要、でないと次のhandshakeがエラーとなることが多かった。16msecだとエラーになることがあった。
     }
   })();
 
@@ -31,6 +41,7 @@ postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, t
       // Listen to a particular event from the child
       child.on('onCompleteHandshakeChild' + (childId + 1), data => {
         console.log(`parent : onCompleteHandshakeChild : from ${childName} : received data : [${data}]`);
+        isCompleteHandshake = true;
       });
       child.on('onChangeChildTextarea' + (childId + 1), data => {
         console.log(`parent : onChangeChildTextarea : from ${childName} : received data : [${data}]`);
@@ -253,7 +264,7 @@ function onmidimessage(data) {
   const baseMsec = postmateMidi.tonejs.baseTimeStampAudioContext * 1000;
   let timestamp = (baseMsec + playTimeMsec + ofsMsec) / 1000;
   if (isNaN(timestamp)) timestamp = undefined; // NaNのときnoteOnされないのを防止する用
-  console.log(`${getParentOrChild()} : synth : ${getMidiEventName(events[0][0])} ${events[0][1]} ${Math.floor((timestamp - Tone.now()) * 1000)}`); // ofsMsecのチューニング用
+  // console.log(`${getParentOrChild()} : synth : ${getMidiEventName(events[0][0])} ${events[0][1]} ${Math.floor((timestamp - Tone.now()) * 1000)}`); // ofsMsecのチューニング用
   // if (timestamp - Tone.now() < 0) alert(); // timestampが過去になっていないことをチェック
   for (const event of events) {
     switch (event[0]) {
