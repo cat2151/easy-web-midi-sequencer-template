@@ -1,11 +1,14 @@
 // usage : parent.js / child.js を参照ください
-const postmateMidi = { parent: null, children: [], childId: null,
+const postmateMidi = {
+  parent: null, midiOutputIds: [],
+  children: [], childId: null,
   ui: { registerPlayButton: null, isIpad },
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
   tonejs: { synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, controlChange: [], initTonejsByUserAction: null } };
 
-postmateMidi.registerParent = function(urls, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+postmateMidi.registerParent = function(urls, midiOutputIds, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
+  postmateMidi.midiOutputIds = midiOutputIds;
   let isCompleteHandshake;
   (async () => {
     for (let childId = 0; childId < urls.length; childId++) {
@@ -223,8 +226,10 @@ function initOnStartPlaying() {
   // seqから呼ばれ、synth側のbaseTimeStampを更新する用
   if (isParent()) {
     console.log(`${getParentOrChild()} : call onStartPlaying`);
-    const destChildId = 1;
-    postmateMidi.children[destChildId].call('onStartPlaying');
+    for (let i = 0; i < postmateMidi.midiOutputIds.length; i++) {
+      const destChildId = postmateMidi.midiOutputIds[i];
+      postmateMidi.children[destChildId].call('onStartPlaying');
+    }
   }
   if (isChild()) {
     console.log(`${getParentOrChild()} : emit onStartPlaying`);
@@ -242,12 +247,10 @@ function onStartPlaying(data) {
 function sendMidiMessage(events, playTime) {
   // 外部sqやkbから直接呼ばれる
   if (isParent()) {
-    // TODO 今後、parentがどのchildにsendするかの配列をpostmateMidiに持たせて、fan（複数childに並列send）可能にして、layer演奏可能にする等も想定する
-    //  それはregisterParent時に引数で配列で受け取る想定、それはindex.htmlでcheckbox等のUIで選択可能にする想定
-
-    // ひとまず、parent seq を、child2 synth にsendする
-    const destChildId = 1;
-    postmateMidi.children[destChildId].call('onmidimessage', [events, playTime]);
+    for (let i = 0; i < postmateMidi.midiOutputIds.length; i++) {
+      const destChildId = postmateMidi.midiOutputIds[i];
+      postmateMidi.children[destChildId].call('onmidimessage', [events, playTime]);
+    }
     return;
   }
   if (isChild()) {
@@ -326,14 +329,18 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
 function afterTonejsStart() {
   // 以降の発音を可能にする用のダミー。ないと音が鳴らないことがあった。
   const synth = postmateMidi.tonejs.synth;
-  synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
-  synth.triggerRelease(Tone.Midi(69).toFrequency());
+  if (synth) { // synthがあるときのみとする。seqのみのjsにおいてはsynthがないことがあるので、そのとき落とさない用。
+    synth.triggerAttack(Tone.Midi(69).toFrequency(), 0, 0);
+    synth.triggerRelease(Tone.Midi(69).toFrequency());
+  }
 
   postmateMidi.tonejs.isStartTone = true;
   if (isParent()) {
     postmateMidi.tonejs.isStartToneParent = true;
-    const destChildId = 1;
-    postmateMidi.children[destChildId].call('onSynthReady'); // parentの状態をchildに伝える用
+    for (let i = 0; i < postmateMidi.midiOutputIds.length; i++) {
+      const destChildId = postmateMidi.midiOutputIds[i];
+      postmateMidi.children[destChildId].call('onSynthReady'); // parentの状態をchildに伝える用
+    }
   }
   if (isChild()) {
     postmateMidi.tonejs.isStartToneChild = true;
