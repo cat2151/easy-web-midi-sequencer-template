@@ -4,22 +4,26 @@ const kb = { isTouch: false };
 const elm = window;
 
 elm.addEventListener("pointerdown", (ev) => {
+  console.log(`pointerdown`, ev);
   if (kb.isTouch) return; // iPadやAndroidで意図せぬ発音処理をさせない用（タッチ後にタップでmouseイベントが発生してここに到達する）
   const x = Math.floor(ev.clientX);
   onmousedownOrTouchStart(x);
 });
 elm.addEventListener("pointermove", (ev) => {
+  console.log(`pointermove`, ev);
   if (kb.isTouch) return;
   const x = ev.clientX;
   onmousemoveOrTouchMove(x);
 });
 
 elm.addEventListener("touchstart", (ev) => {
+  console.log(`touchstart`, ev);
   kb.isTouch = true;
   const x = Math.floor(ev.changedTouches[0].clientX);
   onmousedownOrTouchStart(x);
 });
 elm.addEventListener("touchmove", (ev) => {
+  console.log(`touchmove`, ev);
   kb.isTouch = true;
   const x = Math.floor(ev.changedTouches[0].clientX);
   onmousemoveOrTouchMove(x);
