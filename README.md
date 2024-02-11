@@ -93,6 +93,11 @@
 - Postmate + Tone.js + 疑似midimessage + 簡易仮想MIDIキーボード で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
 - iPadだけはplayボタン必須。それ以外はplayボタンなしで、mouseやtouchで音が鳴ります。
 
+## Experimental10
+- [Demo Experimental10 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental10/)
+- Postmate + Tone.js + 疑似midimessage + 簡易Seq + 簡易仮想Cutoffツマミ で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
+- knobをmouseやtouchでカットオフ周波数が変化します。
+
 ## 当projectが目指すこと
 - `MIDI OUT` する
 - webpageを開くだけで演奏開始する
