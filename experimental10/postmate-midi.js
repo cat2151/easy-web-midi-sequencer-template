@@ -34,7 +34,10 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
     const baseUrl = urls[childId];
     const urlParams = rison2.stringify({ childId }); // risonの用途は、URLを常時読みやすくして開発効率化する用
     const url = `${baseUrl}?query=${urlParams}`;
+    const container = document.querySelector('#child' + (childId + 1));
+    console.log(`parent : container : `, container);
     const handshake = new Postmate({
+      container,
       url
     });
 
@@ -401,7 +404,7 @@ function isAllSynthReady() {
 function checkAllSynthReady() {
   if (isAllSynthReady()) {
     console.log(`${getParentOrChild()} : parent synth and child synth ready`)
-    if (isIpad()) postmateMidi.ui.checkRemovePlayButton(); // playボタンをremoveするのは、iPad向けの仮想キーボード等用。仮想キーボード等においてはiPad対策で音を鳴らすためのユーザーアクション用のplayボタン表示が必須となる。音が鳴ればplayボタンは役目が完了するのでremoveして見た目をわかりやすくする用。
+    if (isIpad() && postmateMidi.ui.checkRemovePlayButton) postmateMidi.ui.checkRemovePlayButton(); // playボタンをremoveするのは、iPad向けの仮想キーボード等用。仮想キーボード等においてはiPad対策で音を鳴らすためのユーザーアクション用のplayボタン表示が必須となる。音が鳴ればplayボタンは役目が完了するのでremoveして見た目をわかりやすくする用。
   }
 }
 

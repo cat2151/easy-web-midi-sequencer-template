@@ -1,7 +1,10 @@
 // 用途 : 簡易仮想Cutoffツマミのtest用
 // usage : parent.js / child.js の import "./knob.js"; 付近を参照ください
 const kb = { isTouch: false };
-const elm = window;
+const div1 = document.querySelector(`#div1`);
+const div2 = document.querySelector(`#div2`);
+// const elm = window;
+const elm = div1; // iPad実機のみで発生するバグの調査用
 
 elm.addEventListener("pointerdown", (ev) => {
   console.log(`pointerdown`, ev);
@@ -60,6 +63,8 @@ function getKeyboardNoteNum(key) {
 // MIDI
 function cc74(v) {
   // console.log(`knob : cc74 : ${v}`);
+  div2.innerHTML = v; // iPad実機のみで発生するバグの調査用
+
   kb.sendMidiMessage([[0xB0, 74, v]]);
 }
 
