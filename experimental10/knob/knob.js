@@ -23,7 +23,8 @@ elm.addEventListener("touchmove", (ev) => {
   kb.isTouch = true;
   const x = Math.floor(ev.changedTouches[0].clientX);
   onmousemoveOrTouchMove(x);
-});
+  ev.preventDefault(); // iPadやAndroidでのスクロールを抑止する用
+}, { passive: false }); // iPadやAndroidでのスクロールを抑止する用
 
 function onmousedownOrTouchStart(x) {
   const noteNum = getMouseNoteNum(x);
