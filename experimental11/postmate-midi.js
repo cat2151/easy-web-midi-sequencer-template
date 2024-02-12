@@ -67,7 +67,7 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
         console.log(`parent : onSynthReady : from ${childName} : received data : [${data}]`);
         onSynthReady(data);
       });
-      child.on('onmidimessage' + (childId + 1), data => {
+      child.on('onmidimessage' + (childId + 1), data => { // onmidimessage1 ～ : child1からcallされた場合は、onmidimessage1 となる
         console.log(`parent : onmidimessage : from ${childName} : received data : [${data}]`);
         // onmidimessage(data);
 
@@ -316,7 +316,7 @@ function sendMidiMessage(events, playTime) {
     return;
   }
   if (isChild()) {
-    // childからは、必ずparentにsendする。parentのon onmidimessageにて、改めてsendMidiMessageする
+    // childからは、必ずparentにsendする。parentのon onmidimessage1～ にて、改めてsendMidiMessageする
     postmateMidi.parent.emit('onmidimessage' + (postmateMidi.childId + 1), [events, playTime]);
     return;
   }
