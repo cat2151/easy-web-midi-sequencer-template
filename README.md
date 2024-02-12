@@ -98,6 +98,11 @@
 - Postmate + Tone.js + 疑似midimessage + 簡易Seq + 簡易仮想Cutoffツマミ で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
 - knobをmouseやtouchでカットオフ周波数が変化します。
 
+## Experimental11
+- [Demo Experimental11 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental11/)
+- Postmate + Tone.js + 疑似midimessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
+- 16chのマルチティンバーシンセです。ch1,2,3が別の音色です。テンプレートで同時発音数12まで確認できます、それ以上もその場でtextareaに書けば確認できるかもしれません。
+
 ## 当projectが目指すこと
 - `MIDI OUT` する
 - webpageを開くだけで演奏開始する
