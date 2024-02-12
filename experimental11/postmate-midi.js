@@ -219,6 +219,7 @@ function isIpad() {
   }
 }
 
+// 用途、synth用。synthはoutputが音であるが、同時に可視化もして、状況把握しやすく使いやすくする用。
 postmateMidi.ui.visualizeCurrentSound = visualizeCurrentSound;
 function visualizeCurrentSound() {
   const analyser = new Tone.Analyser("waveform", 256);
@@ -228,12 +229,13 @@ function visualizeCurrentSound() {
   document.body.appendChild(canvas);
   const ctx = canvas.getContext("2d");
 
-  let eventId = scheduleRepeat();
+  let eventId = startVisualization();
   Tone.Transport.start();
   let isPlaying = true;
-  canvas.addEventListener("click", onClickCanvas);
+  canvas.addEventListener("click", toggleVisualization);
 
-  function scheduleRepeat() {
+  function startVisualization() {
+    // オシロスコープ
     return Tone.Transport.scheduleRepeat(() => {
       const waveform = analyser.getValue();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -247,12 +249,12 @@ function visualizeCurrentSound() {
       ctx.stroke();
     }, "5hz");
   }
-  function onClickCanvas(ev) {
+  function toggleVisualization(ev) {
     isPlaying = !isPlaying;
     if (!isPlaying) {
-      Tone.Transport.clear(eventId);
+      Tone.Transport.clear(eventId); // Androidでオシロスコープ表示中に音途切れが発生することがあり、その対策用。
     } else {
-      eventId = scheduleRepeat();
+      eventId = startVisualization();
       Tone.Transport.start();
     }
   }
@@ -461,6 +463,7 @@ function initCh(ch) {
   }
 
   ch.controlChange[0x78] = (v) => {
+    // 備忘、現状、Tone.jsにtriggerAttack等で発音予約した音を消す方法が見つからない。このため、発音予約直後にstopして次のplayをすぐ行うと演奏が崩れることがある。対策はplayを1秒程度おいて押しなおす等。
     allSoundOff();
     function allSoundOff() {
       const synth = ch.synth;
