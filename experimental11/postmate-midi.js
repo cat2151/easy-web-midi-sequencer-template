@@ -478,6 +478,7 @@ function initCh(ch) {
     allSoundOff();
     function allSoundOff() {
       const synth = ch.synth;
+      if (!synth) return;
       for (let noteNum = 0; noteNum < 128; noteNum++) {
         for (let i = 0; i < 4; i++) {
           synth.triggerRelease(Tone.Midi(noteNum).toFrequency(), /*time=*/0); // 時刻0が過去だからか、すぐ消音される
@@ -490,6 +491,7 @@ function initCh(ch) {
     allNoteOff();
     function allNoteOff() {
       const synth = ch.synth;
+      if (!synth) return;
       // PolySynthは明示的にnoteNumの指定をしないとエラーになった。また、タイミング次第では1回で不足のことがあったので、ひとまず4回noteOffとした。
       for (let noteNum = 0; noteNum < 128; noteNum++) {
         for (let i = 0; i < 4; i++) {
