@@ -10,6 +10,6 @@ for (let ch = 0; ch < 16; ch++) {
 initSynth(postmateMidi.ch[1-1], {oscillator: {type: 'square'}});
 initSynth(postmateMidi.ch[2-1], {oscillator: {type: 'sawtooth'}});
 
-postmateMidi.ui.visualizeCurrentSound();
+// postmateMidi.ui.visualizeCurrentSound();
 
 console.log(`postmate-midi child2:`, postmateMidi);
