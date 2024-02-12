@@ -4,11 +4,10 @@ const urlParams = rison2.parse(new URL(window.location.href).searchParams.get('q
 postmateMidi.registerChild(urlParams, null, null, null, null, null);
 
 import { initSynth } from "./synth-poly.js";
-for (let ch = 0; ch < 16; ch++) {
-  initSynth(postmateMidi.ch[ch], {oscillator: {type: 'triangle'}});
-}
 initSynth(postmateMidi.ch[1-1], {oscillator: {type: 'square'}});
 initSynth(postmateMidi.ch[2-1], {oscillator: {type: 'sawtooth'}});
+initSynth(postmateMidi.ch[3-1], {oscillator: {type: 'triangle'}});
+// 備忘、4-1～16-1は、noteOnしたらalertとなるままにしておく、理由、Androidで空のsynth 4-1～16-1があるとき、ビジュアライザありで、音途切れが発生していたため（だが再現しなくなった）
 
 postmateMidi.ui.visualizeCurrentSound();
 
