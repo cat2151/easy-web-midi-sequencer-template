@@ -227,19 +227,35 @@ function visualizeCurrentSound() {
   canvas.width = window.innerWidth;
   document.body.appendChild(canvas);
   const ctx = canvas.getContext("2d");
-  Tone.Transport.scheduleRepeat(() => {
-    const waveform = analyser.getValue();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.beginPath();
-    ctx.strokeStyle = "#0f0"; // dark mode / light 両対応を想定
-    for (let i = 0; i < waveform.length; i++) {
-      const x = (i / waveform.length) * canvas.width;
-      const y = (0.5 * canvas.height) - (waveform[i] * canvas.height * 4); // 多少表示が見切れてもよいので派手に振幅を見せることを優先する用
-      ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }, "5hz");
+
+  let eventId = scheduleRepeat();
   Tone.Transport.start();
+  let isPlaying = true;
+  canvas.addEventListener("click", onClickCanvas);
+
+  function scheduleRepeat() {
+    return Tone.Transport.scheduleRepeat(() => {
+      const waveform = analyser.getValue();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.strokeStyle = "#0f0"; // dark mode / light 両対応を想定
+      for (let i = 0; i < waveform.length; i++) {
+        const x = (i / waveform.length) * canvas.width;
+        const y = (0.5 * canvas.height) - (waveform[i] * canvas.height * 4); // 多少表示が見切れてもよいので派手に振幅を見せることを優先する用
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }, "5hz");
+  }
+  function onClickCanvas(ev) {
+    isPlaying = !isPlaying;
+    if (!isPlaying) {
+      Tone.Transport.clear(eventId);
+    } else {
+      eventId = scheduleRepeat();
+      Tone.Transport.start();
+    }
+  }
 }
 
 //////////
