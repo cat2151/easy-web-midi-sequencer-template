@@ -219,6 +219,10 @@ function isIpad() {
   }
 }
 
+function isSmartPhone() {
+  return navigator.userAgent.match(/iPhone|Android.+Mobile/);
+}
+
 // 用途、synth用。synthはoutputが音であるが、同時に可視化もして、状況把握しやすく使いやすくする用。
 postmateMidi.ui.visualizeCurrentSound = visualizeCurrentSound;
 function visualizeCurrentSound() {
@@ -229,11 +233,15 @@ function visualizeCurrentSound() {
   document.body.appendChild(canvas);
   const ctx = canvas.getContext("2d");
 
+  let interval = getInitialInterval();
   let eventId = startVisualization();
   Tone.Transport.start();
-  let isPlaying = true;
-  canvas.addEventListener("click", toggleVisualization);
+  canvas.addEventListener("click", changeVisualization);
 
+  function getInitialInterval() {
+    if (isSmartPhone()) return 5; // AndroidやiPhone用
+    return 60;                    // PCやiPad用
+  }
   function startVisualization() {
     // オシロスコープ
     return Tone.Transport.scheduleRepeat(() => {
@@ -247,13 +255,16 @@ function visualizeCurrentSound() {
         ctx.lineTo(x, y);
       }
       ctx.stroke();
-    }, "5hz");
+    }, interval + "hz");
   }
-  function toggleVisualization(ev) {
-    isPlaying = !isPlaying;
-    if (!isPlaying) {
-      Tone.Transport.clear(eventId); // Androidでオシロスコープ表示中に音途切れが発生することがあり、その対策用。
-    } else {
+  function changeVisualization(ev) {
+    Tone.Transport.clear(eventId);
+    switch (interval) {
+    case  5: interval = 60; break; // 頻繁     : PCで60Hzで描画更新し、波形のエンベロープ変化等を把握しやすくする用
+    case 60: interval =  0; break; // 描画なし : Androidでオシロスコープ表示中に音途切れが発生することがあり、その対策用
+    case  0: interval =  5; break; // 軽量     : Androidで同時発音数1～8用
+    }
+    if (interval) {
       eventId = startVisualization();
       Tone.Transport.start();
     }
