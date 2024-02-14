@@ -10,7 +10,7 @@ const postmateMidi = {
 postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   const ui = postmateMidi.ui;
   const urls = urlParams.urls;
-  postmateMidi.midiOutputIds = urlParams.midiOutputIds;
+  postmateMidi.midiOutputIds = getMidiOutputIds(urlParams.midiOutput);
   let isCompleteHandshake;
   (async () => {
     for (let childId = 0; childId < urls.length; childId++) {
@@ -20,7 +20,9 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
       while (!isCompleteHandshake) {
         /*sleep*/await new Promise(resolve => setTimeout(resolve, 16));
         if (i++ > 60) {
-          console.log(`child${childId + 1} : handshake : 時間切れ`);
+          const s = `child${childId + 1} : handshake : 時間切れ`;
+          console.log(s);
+          alert(s);
           break;
         }
       }
@@ -96,6 +98,48 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
 
       postmateMidi.children[childId] = child;
     });
+  }
+
+  function getMidiOutputIds(midiOutput) {
+    // 例 : midiOutput: {"parent":["child1","child2"],"child1":["child2"],"child2":[]} → midiOutputIds: [[0,1],[1],[]]
+    let ids = [];
+    for (const property in midiOutput) {
+      // console.log(`${property}: ${midiOutput[property]}`);
+      if (property == 'parent') {
+        ids[0] = getChildIds(midiOutput.parent);
+        // console.log(`ids: parent: ${ids}`);
+      } else {
+        const nameArr = property.split('child');
+        const index = parseInt(nameArr[1]);
+        // console.log(`nameArr: ${nameArr} i: ${id}`);
+        if (nameArr[0] == '' && Number.isInteger(index) && index >= 1) {
+          ids[index] = getChildIds(midiOutput[property])
+        } else {
+          alert(property);
+        }
+      }
+      // console.log(`ids: ${ids}`);
+    }
+    console.log(`midiOutput: ${JSON.stringify(midiOutput)} → midiOutputIds: ${JSON.stringify(ids)}`);
+    return ids;
+
+    function getChildIds(childNames) {
+      let ids = [];
+      for (let i = 0; i < childNames.length; i++) {
+        ids[i] = getChildId(childNames[i]);
+      }
+      return ids;
+
+      function getChildId(childName) {
+        const nameArr = childName.split('child');
+        const i = parseInt(nameArr[1]);
+        if (nameArr[0] == '' && Number.isInteger(i) && i >= 1) {
+          const childId = i - 1;
+          return childId;
+        }
+        alert(childName);
+      }
+    }
   }
 }
 
@@ -288,8 +332,8 @@ function initOnStartPlaying() {
   // seqから呼ばれ、synth側のbaseTimeStampを更新する用
   if (isParent()) {
     console.log(`${getParentOrChild()} : call onStartPlaying`);
-    for (let i = 0; i < postmateMidi.midiOutputIds.length; i++) {
-      const destChildId = postmateMidi.midiOutputIds[i];
+    for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
+      const destChildId = postmateMidi.midiOutputIds[0][i];
       postmateMidi.children[destChildId].call('onStartPlaying');
     }
   }
@@ -309,8 +353,8 @@ function onStartPlaying(data) {
 function sendMidiMessage(events, playTime) {
   // 外部sqやkbから直接呼ばれる
   if (isParent()) {
-    for (let i = 0; i < postmateMidi.midiOutputIds.length; i++) {
-      const destChildId = postmateMidi.midiOutputIds[i];
+    for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
+      const destChildId = postmateMidi.midiOutputIds[0][i];
       postmateMidi.children[destChildId].call('onmidimessage', [events, playTime]);
     }
     return;
@@ -381,7 +425,9 @@ postmateMidi.tonejs.initTonejsByUserAction = () => {
           break;
         }
         if (i++ > 60) {
-          console.log(`${getParentOrChild()} : 時間切れ`);
+          const s = `${getParentOrChild()} : init Tone.js : 時間切れ`;
+          console.log(s);
+          alert(s);
           break;
         }
       }
@@ -402,8 +448,8 @@ function afterTonejsStart() {
   postmateMidi.tonejs.isStartTone = true;
   if (isParent()) {
     postmateMidi.tonejs.isStartToneParent = true;
-    for (let i = 0; i < postmateMidi.midiOutputIds.length; i++) {
-      const destChildId = postmateMidi.midiOutputIds[i];
+    for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
+      const destChildId = postmateMidi.midiOutputIds[0][i];
       postmateMidi.children[destChildId].call('onSynthReady'); // parentの状態をchildに伝える用
     }
   }
