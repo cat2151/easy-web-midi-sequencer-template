@@ -101,19 +101,19 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
   }
 
   function getMidiOutputIds(midiOutput) {
-    // 例 : midiOutput: {"parent":["child1","child2"],"child1":["child2"],"child2":[]} → midiOutputIds: [[0,1],[1],[]]
+    // 例 : midiOutput: {"parent":["parent","child1"],"child1":["child2"],"child2":[]} → midiOutputIds: [[0,1],[2],[]]
     let ids = [];
     for (const property in midiOutput) {
       // console.log(`${property}: ${midiOutput[property]}`);
       if (property == 'parent') {
-        ids[0] = getChildIds(midiOutput.parent);
+        ids[0] = getOutputIds(midiOutput.parent);
         // console.log(`ids: parent: ${ids}`);
       } else {
         const nameArr = property.split('child');
         const index = parseInt(nameArr[1]);
         // console.log(`nameArr: ${nameArr} i: ${id}`);
         if (nameArr[0] == '' && Number.isInteger(index) && index >= 1) {
-          ids[index] = getChildIds(midiOutput[property])
+          ids[index] = getOutputIds(midiOutput[property])
         } else {
           alert(property);
         }
@@ -123,21 +123,21 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
     console.log(`midiOutput: ${JSON.stringify(midiOutput)} → midiOutputIds: ${JSON.stringify(ids)}`);
     return ids;
 
-    function getChildIds(childNames) {
+    function getOutputIds(deviceNames) {
       let ids = [];
-      for (let i = 0; i < childNames.length; i++) {
-        ids[i] = getChildId(childNames[i]);
+      for (let i = 0; i < deviceNames.length; i++) {
+        ids[i] = getOutputId(deviceNames[i]);
       }
       return ids;
 
-      function getChildId(childName) {
-        const nameArr = childName.split('child');
-        const i = parseInt(nameArr[1]);
-        if (nameArr[0] == '' && Number.isInteger(i) && i >= 1) {
-          const childId = i - 1;
-          return childId;
+      function getOutputId(deviceName) {
+        if (deviceName == 'parent') return 0;
+        const nameArr = deviceName.split('child');
+        const outputId = parseInt(nameArr[1]);
+        if (nameArr[0] == '' && Number.isInteger(outputId) && outputId >= 1) {
+          return outputId;
         }
-        alert(childName);
+        alert(deviceName);
       }
     }
   }
@@ -333,8 +333,10 @@ function initOnStartPlaying() {
   if (isParent()) {
     console.log(`${getParentOrChild()} : call onStartPlaying`);
     for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
-      const destChildId = postmateMidi.midiOutputIds[0][i];
-      postmateMidi.children[destChildId].call('onStartPlaying');
+      const outputId = postmateMidi.midiOutputIds[0][i];
+      if (!outputId) continue; // 何もしない。事前に onStartPlaying() 済みなので。
+      const childId = outputId - 1;
+      postmateMidi.children[childId].call('onStartPlaying');
     }
   }
   if (isChild()) {
@@ -354,8 +356,13 @@ function sendMidiMessage(events, playTime) {
   // 外部sqやkbから直接呼ばれる
   if (isParent()) {
     for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
-      const destChildId = postmateMidi.midiOutputIds[0][i];
-      postmateMidi.children[destChildId].call('onmidimessage', [events, playTime]);
+      const outputId = postmateMidi.midiOutputIds[0][i];
+      if (!outputId) {
+        onmidimessage([events, playTime]);
+      } else {
+        const childId = outputId - 1;
+        postmateMidi.children[childId].call('onmidimessage', [events, playTime]);
+      }
     }
     return;
   }
@@ -449,8 +456,10 @@ function afterTonejsStart() {
   if (isParent()) {
     postmateMidi.tonejs.isStartToneParent = true;
     for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
-      const destChildId = postmateMidi.midiOutputIds[0][i];
-      postmateMidi.children[destChildId].call('onSynthReady'); // parentの状態をchildに伝える用
+      const outputId = postmateMidi.midiOutputIds[0][i];
+      if (!outputId) continue; // 何もしない。既に isStartToneParent true 済みなので。
+      const childId = outputId - 1;
+      postmateMidi.children[childId].call('onSynthReady'); // parentの状態をchildに伝える用
     }
   }
   if (isChild()) {
