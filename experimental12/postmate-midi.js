@@ -375,6 +375,10 @@ function sendMidiMessage(events, playTime) {
 
 const ofsMsec = 50; // seq側の送信タイミングのジッタを、synth側の発音時刻指定で吸収する用。timestampが過去にならない程度の値とした。過去になると発音やenvelopeが異常となる想定。手元では50msecがそこそこ安定した感触。今後は環境ごとに指定可能にする想定。その場合は「レイテンシなし（ジッタがある）」も選べる想定。
 function onmidimessage(data) {
+  if (postmateMidi.midiFilterFnc) {
+    data = postmateMidi.midiFilterFnc(data);
+    postmateMidi.sendMidiMessage(data[0], data[1]);
+  }
   const events = data[0];
   const playTimeMsec = data[1];
   const baseMsec = postmateMidi.tonejs.baseTimeStampAudioContext * 1000;
