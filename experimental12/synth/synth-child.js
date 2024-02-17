@@ -11,4 +11,4 @@ initSynth(postmateMidi.ch[3-1], {oscillator: {type: 'triangle'}});
 
 postmateMidi.ui.visualizeCurrentSound();
 
-console.log(`postmate-midi child2:`, postmateMidi);
+console.log(`postmate-midi synty-child:`, postmateMidi);

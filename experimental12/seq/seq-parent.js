@@ -6,4 +6,4 @@ postmateMidi.registerParent(urlParams, '#textarea', sq.startPlayJson, 'select', 
 postmateMidi.seq.registerSeq(sq);
 postmateMidi.ui.registerPlayButton('button', sq.togglePlay);
 
-console.log(`postmate-midi parent:`, postmateMidi);
+console.log(`postmate-midi seq-parent:`, postmateMidi);
