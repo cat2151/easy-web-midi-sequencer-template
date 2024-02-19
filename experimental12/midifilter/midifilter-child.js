@@ -3,6 +3,7 @@ if (!new URL(window.location.href).searchParams.get('query')) window.location.hr
 const urlParams = rison2.parse(new URL(window.location.href).searchParams.get('query'));
 postmateMidi.registerChild(urlParams, null, null, null, null, null);
 
-// TODO XXX midifilterをposmateMidiにregisterする
+import { midifilter } from "./midifilter.js";
+postmateMidi.midiFilter = midifilter;
 
 console.log(`postmate-midi midifilter-child:`, postmateMidi);

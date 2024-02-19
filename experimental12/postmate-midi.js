@@ -71,13 +71,23 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
       });
       child.on('onmidimessage' + (childId + 1), data => { // onmidimessage1 ～ : child1からcallされた場合は、onmidimessage1 となる
         console.log(`parent : onmidimessage : from ${childName} : received data : [${data}]`);
-        // onmidimessage(data);
+        // child1～n がrecvしたMIDImessageを、
+        // midiOutputIdsを元に、MIDIoutする
 
-        // seq + knob + synth の構成用、ひとまず、child1 or child2からparentにsendされたmidiは、決め打ちで、今度はparentからchild2にsendする
-        // TODO 今後は、child1かchild2を選べるようにする、registerParent時に配列で受け取る
-        sendMidiMessage(data[0], data[1]);
+        const deviceId = childId + 1;
+        const events = data[0];
+        const playTime = data[1];
+        // TODO XXX sendMidiMessage のparentと統合する
+        for (let i = 0; i < postmateMidi.midiOutputIds[deviceId].length; i++) {
+          const outputId = postmateMidi.midiOutputIds[deviceId][i];
+          if (!outputId) {
+            onmidimessage([events, playTime]);
+          } else {
+            const childId = outputId - 1;
+            postmateMidi.children[childId].call('onmidimessage', [events, playTime]);
+          }
+        }
       });
-
       // childとの双方向通信のtest用
       if (textareaSelector) {
         ui.textarea = document.querySelector(textareaSelector);
@@ -375,9 +385,10 @@ function sendMidiMessage(events, playTime) {
 
 const ofsMsec = 50; // seq側の送信タイミングのジッタを、synth側の発音時刻指定で吸収する用。timestampが過去にならない程度の値とした。過去になると発音やenvelopeが異常となる想定。手元では50msecがそこそこ安定した感触。今後は環境ごとに指定可能にする想定。その場合は「レイテンシなし（ジッタがある）」も選べる想定。
 function onmidimessage(data) {
-  if (postmateMidi.midiFilterFnc) {
-    data = postmateMidi.midiFilterFnc(data);
-    postmateMidi.sendMidiMessage(data[0], data[1]);
+  if (postmateMidi.midiFilter) {
+    data = postmateMidi.midiFilter(data);
+    sendMidiMessage(data[0], data[1]);
+    return;
   }
   const events = data[0];
   const playTimeMsec = data[1];
