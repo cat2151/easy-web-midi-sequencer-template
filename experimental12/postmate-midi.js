@@ -71,22 +71,8 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
       });
       child.on('onmidimessage' + (childId + 1), data => { // onmidimessage1 ～ : child1からcallされた場合は、onmidimessage1 となる
         console.log(`parent : onmidimessage : from ${childName} : received data : [${data}]`);
-        // child1～n がrecvしたMIDImessageを、
-        // midiOutputIdsを元に、MIDIoutする
-
-        const deviceId = childId + 1;
-        const events = data[0];
-        const playTime = data[1];
-        // TODO XXX sendMidiMessage のparentと統合する
-        for (let i = 0; i < postmateMidi.midiOutputIds[deviceId].length; i++) {
-          const outputId = postmateMidi.midiOutputIds[deviceId][i];
-          if (!outputId) {
-            onmidimessage([events, playTime]);
-          } else {
-            const childId = outputId - 1;
-            postmateMidi.children[childId].call('onmidimessage', [events, playTime]);
-          }
-        }
+        // child1～n がrecvしたMIDImessageを、一度ここparentに集約したのち、振り分けてMIDIoutする
+        sendMidiMessageFromDevice(data[0], data[1], /*deviceId=*/childId + 1)
       });
       // childとの双方向通信のtest用
       if (textareaSelector) {
@@ -365,21 +351,25 @@ function onStartPlaying(data) {
 function sendMidiMessage(events, playTime) {
   // 外部sqやkbから直接呼ばれる
   if (isParent()) {
-    for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
-      const outputId = postmateMidi.midiOutputIds[0][i];
-      if (!outputId) {
-        onmidimessage([events, playTime]);
-      } else {
-        const childId = outputId - 1;
-        postmateMidi.children[childId].call('onmidimessage', [events, playTime]);
-      }
-    }
+    sendMidiMessageFromDevice(events, playTime, /*deviceId=*/0);
     return;
   }
   if (isChild()) {
     // childからは、必ずparentにsendする。parentのon onmidimessage1～ にて、改めてsendMidiMessageする
     postmateMidi.parent.emit('onmidimessage' + (postmateMidi.childId + 1), [events, playTime]);
     return;
+  }
+}
+
+function sendMidiMessageFromDevice(events, playTime, deviceId) {
+  for (let i = 0; i < postmateMidi.midiOutputIds[deviceId].length; i++) {
+    const outputId = postmateMidi.midiOutputIds[deviceId][i];
+    if (!outputId) {
+      onmidimessage([events, playTime]);
+    } else {
+      const childId = outputId - 1;
+      postmateMidi.children[childId].call('onmidimessage', [events, playTime]);
+    }
   }
 }
 
