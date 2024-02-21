@@ -72,7 +72,7 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
       child.on('onmidimessage' + (childId + 1), data => { // onmidimessage1 ～ : child1からcallされた場合は、onmidimessage1 となる
         console.log(`parent : onmidimessage : from ${childName} : received data : [${data}]`);
         // child1～n がrecvしたMIDImessageを、一度ここparentに集約したのち、振り分けてMIDIoutする
-        sendMidiMessageFromDevice(data[0], data[1], /*deviceId=*/childId + 1)
+        sendMidiMessageFromDevice(data[0], data[1], /*deviceId=*/childId + 1);
       });
       // childとの双方向通信のtest用
       if (textareaSelector) {
