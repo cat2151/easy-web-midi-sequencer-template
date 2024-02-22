@@ -215,6 +215,7 @@ postmateMidi.ui.registerPlayButton = function(buttonSelector, playButtonFnc, isR
     if (!isRemovePlayButtonAtTonejsStartRunning) return;
     ui.button.remove();
   }
+  ui.button.focus(); // pageを開いてspace keyを押すだけでplay開始できる用。開発時に便利。今後は必要に応じて自動focusのon/offを設定可能にするかも検討予定。
 }
 
 function setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc) {
