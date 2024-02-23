@@ -63,7 +63,13 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
       });
       child.on('onStartPlaying' + (childId + 1), data => {
         console.log(`parent : onStartPlaying : from ${childName} : received data : [${data}]`);
+        // parentのぶん
         onStartPlaying(data);
+        // このchild以外のすべてのchildのぶん ※このchildに送信すると無限loopになってしまうはず
+        for (let i = 0; i < postmateMidi.children.length; i++) {
+          if (i == childId) continue;
+          postmateMidi.children[i].call('onStartPlaying', data);
+        }
       });
       child.on('onSynthReady' + (childId + 1), data => {
         console.log(`parent : onSynthReady : from ${childName} : received data : [${data}]`);
@@ -328,15 +334,14 @@ function initOnStartPlaying() {
 
   // seqから呼ばれ、synth側のbaseTimeStampを更新する用
   if (isParent()) {
-    console.log(`${getParentOrChild()} : call onStartPlaying`);
-    for (let i = 0; i < postmateMidi.midiOutputIds[0].length; i++) {
-      const outputId = postmateMidi.midiOutputIds[0][i];
-      if (!outputId) continue; // 何もしない。事前に onStartPlaying() 済みなので。
-      const childId = outputId - 1;
+    // parentがseqだった場合、すべてのchildのbaseTimeStampを更新する用
+    for (let childId = 0; childId < postmateMidi.children.length; childId++) {
+      console.log(`${getParentOrChild()} : to child${childId + 1} : call onStartPlaying`);
       postmateMidi.children[childId].call('onStartPlaying');
     }
   }
   if (isChild()) {
+    // childがseqだった場合、以下のemitされたparentにて、parentと自分以外のすべてのchildのbaseTimeStampを更新する用
     console.log(`${getParentOrChild()} : emit onStartPlaying`);
     postmateMidi.parent.emit('onStartPlaying' + (postmateMidi.childId + 1));
   }
