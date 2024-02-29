@@ -9,7 +9,11 @@ const postmateMidi = {
   isAllSynthReady: false, // 名前が紛らわしいが、seqが持つfncとは別。parentとchildそれぞれが保持する変数。seqが持つfncは外部からこれにアクセスする用のアクセサ。
   tonejs: { isStartTone: false, synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, initTonejsByUserAction: null } };
 
+let isParent = false; // ひとまず非公開、postmateMidiをシンプルにする優先
+let isChild  = false;
+
 postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+  isParent = true;
   const ui = postmateMidi.ui;
   const urls = urlParams.urls;
   postmateMidi.midiOutputIds = getMidiOutputIds(urlParams.midiOutput);
@@ -106,6 +110,23 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
     });
   }
 
+  if (!urls.length) {
+    // isStandalone
+    if (textareaSelector) {
+      ui.textarea = document.querySelector(textareaSelector);
+      ui.textarea.addEventListener("input", onChangeTextarea);
+      if (textareaTemplateDropDownListSelector) {
+        setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc);
+      }
+
+      function onChangeTextarea() {
+        if (textareaSeqFnc) {
+          textareaSeqFnc(ui.textarea.value);
+        }
+      }
+    }
+  }
+
   function getMidiOutputIds(midiOutput) {
     // 例 : midiOutput: {"parent":["parent","child1"],"child1":["child2"],"child2":[]} → midiOutputIds: [[0,1],[2],[]]
     let ids = [];
@@ -137,6 +158,7 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
       return ids;
 
       function getOutputId(deviceName) {
+        // console.log(`deviceName : ${deviceName}`)
         if (deviceName == 'parent') return 0;
         const nameArr = deviceName.split('child');
         const outputId = parseInt(nameArr[1]);
@@ -150,6 +172,7 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
 }
 
 postmateMidi.registerChild = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+  isChild = true;
   const ui = postmateMidi.ui;
   const childId = urlParams.childId;
 
@@ -203,16 +226,9 @@ postmateMidi.registerChild = function(urlParams, textareaSelector, textareaSeqFn
   }
 }
 
-function isParent() {
-  return Boolean(postmateMidi.children.length); // childを持っているならparent。code中に if (postmateMidi.children[0]) があると、isChildの意味と混同してミスしたので、防止用にisを用意した。
-}
-function isChild() {
-  return Boolean(postmateMidi.parent); // parentを持っているならchild
-}
-
 function getParentOrChild() { // for debug
-  if (isParent()) return 'parent';
-  if (isChild()) return `child${postmateMidi.childId + 1}`;
+  if (isParent) return 'parent';
+  if (isChild)  return `child${postmateMidi.childId + 1}`;
 }
 
 ////////
@@ -341,14 +357,14 @@ function initOnStartPlaying() {
   onStartPlaying(); // seq and synth のときは不要だったが、keyboard and synthのときiPad対策で、parent and child all synthの初期化が必要となったので
 
   // seqから呼ばれ、synth側のbaseTimeStampを更新する用
-  if (isParent()) {
+  if (isParent) {
     // parentがseqだった場合、すべてのchildのbaseTimeStampを更新する用
     for (let childId = 0; childId < postmateMidi.children.length; childId++) {
       console.log(`${getParentOrChild()} : to child${childId + 1} : call onStartPlaying`);
       postmateMidi.children[childId].call('onStartPlaying');
     }
   }
-  if (isChild()) {
+  if (isChild) {
     // childがseqだった場合、以下のemitされたparentにて、parentと自分以外のすべてのchildのbaseTimeStampを更新する用
     console.log(`${getParentOrChild()} : emit onStartPlaying`);
     postmateMidi.parent.emit('onStartPlaying' + (postmateMidi.childId + 1));
@@ -364,11 +380,11 @@ function onStartPlaying(data) {
 
 function sendMidiMessage(events, playTime) {
   // 外部sqやkbから直接呼ばれる
-  if (isParent()) {
+  if (isParent) {
     sendMidiMessageFromDevice(events, playTime, /*deviceId=*/0);
     return;
   }
-  if (isChild()) {
+  if (isChild) {
     // childからは、必ずparentにsendする。parentのon onmidimessage1～ にて、改めてsendMidiMessageする
     postmateMidi.parent.emit('onmidimessage' + (postmateMidi.childId + 1), [events, playTime]);
     return;
@@ -472,11 +488,11 @@ function afterTonejsStart() {
   }
 
   postmateMidi.tonejs.isStartTone = true; // 名前が紛らわしいが、postmateMidi.isStartTone[] とは別で、parentとchildがそれぞれtonejs配下に保持する。外部sqなどからアクセスする用。
-  if (isParent()) {
+  if (isParent) {
     postmateMidi.isStartTone[0] = true; // 名前が紛らわしいが、postmateMidi.tonejs.isStartTone とは別で、parentがparentと全てのchildのぶんを知っておく用。
     checkAllSynthReady();
   }
-  if (isChild()) {
+  if (isChild) {
     // parentに情報を集約する
     postmateMidi.parent.emit('onSynthReady' + (postmateMidi.childId + 1));
   }
@@ -504,7 +520,7 @@ function checkAllSynthReady() {
 }
 function checkAllSynthReadyParent() {
   console.log(`${getParentOrChild()} : isStartTone : `, postmateMidi.isStartTone);
-  if (!isParent()) return false;
+  if (!isParent) return false;
   if (!postmateMidi.isStartTone.length) return false;
   if (!postmateMidi.isStartTone.every(val => val === true)) return false;
   postmateMidi.isAllSynthReady = true;

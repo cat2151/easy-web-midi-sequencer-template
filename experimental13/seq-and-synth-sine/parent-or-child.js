@@ -5,11 +5,25 @@ if (!new URL(window.location.href).searchParams.get('query')) window.location.hr
 const urlParams = rison2.parse(new URL(window.location.href).searchParams.get('query'));
 
 if (urlParams.urls) {
-  // isParent
-  postmateMidi.registerParent(urlParams, '#textarea', sq.startPlayJson, 'select', sq.getTemplates, sq.setupByData);
-  postmateMidi.seq.registerSeq(sq);
-  postmateMidi.ui.registerPlayButton('button', sq.togglePlay);
-  console.log(`postmate-midi parent:`, postmateMidi);
+  // isStandalone or isParent
+  if (!urlParams.urls.length) {
+    // isStandalone
+    postmateMidi.registerParent(urlParams, '#textarea', sq.startPlayJson, 'select', sq.getTemplates, sq.setupByData);
+    postmateMidi.seq.registerSeq(sq);
+    postmateMidi.ui.registerPlayButton('button', sq.togglePlay);
+
+    // initSynth(postmateMidi.ch[1-1], {oscillator: {type: 'sawtooth'}});
+    initSynth(postmateMidi.ch[1-1], {oscillator: {type: 'sine'}});
+    postmateMidi.ui.visualizeCurrentSound();
+
+    console.log(`postmate-midi standalone:`, postmateMidi);
+  } else {
+    // isParent
+    postmateMidi.registerParent(urlParams, '#textarea', sq.startPlayJson, 'select', sq.getTemplates, sq.setupByData);
+    postmateMidi.seq.registerSeq(sq);
+    postmateMidi.ui.registerPlayButton('button', sq.togglePlay);
+    console.log(`postmate-midi parent:`, postmateMidi);
+  }
 } else if (urlParams.childId >= 0) {
   // isChild
   postmateMidi.registerChild(urlParams, null, null, null, null, null);
