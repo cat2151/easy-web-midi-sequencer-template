@@ -4,6 +4,7 @@ const postmateMidi = {
   parent: null, childId: null,   // childのみが保持するもの
   midiOutputIds: [],
   ch: Array.from({ length: 16 }, () => ({ noteOn: null, noteOff: null, controlChange: [] })),
+  registerParent, registerChild,
   ui: { registerPlayButton: null, isIpad },
   seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
   isAllSynthReady: false, // 名前が紛らわしいが、seqが持つfncとは別。parentとchildそれぞれが保持する変数。seqが持つfncは外部からこれにアクセスする用のアクセサ。
@@ -12,7 +13,7 @@ const postmateMidi = {
 let isParent = false; // ひとまず非公開、postmateMidiをシンプルにする優先
 let isChild  = false;
 
-postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   isParent = true;
   const ui = postmateMidi.ui;
   const urls = urlParams.urls;
@@ -171,7 +172,7 @@ postmateMidi.registerParent = function(urlParams, textareaSelector, textareaSeqF
   }
 }
 
-postmateMidi.registerChild = function(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
+function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   isChild = true;
   const ui = postmateMidi.ui;
   const childId = urlParams.childId;
