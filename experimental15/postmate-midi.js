@@ -45,8 +45,10 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
     const baseUrl = urls[childId];
     const urlParams = rison2.stringify({ childId }); // risonの用途は、URLを常時読みやすくして開発効率化する用
     const url = `${baseUrl}?query=${urlParams}`;
-    const container = document.querySelector('#child' + (childId + 1));
+    const selector = '#child' + (childId + 1);
+    const container = document.querySelector(selector);
     console.log(`parent : container : `, container);
+    if (!container) alert(`index.htmlに ${selector} を書いてください`)
     const handshake = new Postmate({
       container,
       url
