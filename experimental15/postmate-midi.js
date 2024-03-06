@@ -1,14 +1,15 @@
 // usage : parent.js / child.js を参照ください
 const postmateMidi = {
+  registerParent,
   children: [], isStartTone: [], // parentのみが保持するもの
+  registerChild,
   parent: null, childId: null,   // childのみが保持するもの
   midiOutputIds: [],
   ch: Array.from({ length: 16 }, () => ({ noteOn: null, noteOff: null, controlChange: [] })),
-  registerParent, registerChild,
-  ui: { registerPlayButton: null, isIpad },
-  seq: { registerSeq: null }, // register時、seqそのものが外部sqに上書きされる
+  ui: { registerPlayButton, isIpad, isSmartPhone, visualizeCurrentSound },
+  seq: { registerSeq }, // register時、seqそのものが外部sqに上書きされる
   isAllSynthReady: false, // 名前が紛らわしいが、seqが持つfncとは別。parentとchildそれぞれが保持する変数。seqが持つfncは外部からこれにアクセスする用のアクセサ。
-  tonejs: { isStartTone: false, synth: null, initBaseTimeStampAudioContext: null, baseTimeStampAudioContext: 0, initTonejsByUserAction: null } };
+  tonejs: { isStartTone: false, synth: null, initBaseTimeStampAudioContext, baseTimeStampAudioContext: 0, initTonejsByUserAction } };
 
 let isParent = false; // ひとまず非公開、postmateMidiをシンプルにする優先
 let isChild  = false;
@@ -70,6 +71,16 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
       child.on('onChangeChildTextarea' + (childId + 1), data => {
         console.log(`parent : onChangeChildTextarea : from ${childName} : received data : [${data}]`);
         ui.textarea.value = data;
+      });
+      child.on('onClickPlayButton' + (childId + 1), data => {
+        console.log(`parent : onClickPlayButton : from ${childName}`);
+        // parentのぶん
+        onClickPlayButton();
+        // このchild以外のすべてのchildのぶん ※このchildに送信すると無限loopになってしまうはず
+        for (let i = 0; i < postmateMidi.children.length; i++) {
+          if (i == childId) continue;
+          postmateMidi.children[i].call('onClickPlayButton');
+        }
       });
       child.on('onStartPlaying' + (childId + 1), data => {
         console.log(`parent : onStartPlaying : from ${childName} : received data : [${data}]`);
@@ -184,6 +195,7 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
     height: () => document.height || document.body.offsetHeight,
     onCompleteHandshakeParent,
     onChangeParentTextarea,
+    onClickPlayButton,
     onStartPlaying,
     onAllSynthReady,
     onmidimessage
@@ -203,6 +215,7 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
 
       function onChangeTextarea() {
         if (textareaSeqFnc) {
+          console.log(`child${childId + 1} : onChangeTextarea : textareaSeqFnc`);
           textareaSeqFnc(ui.textarea.value);
         } else {
           console.log(`child${childId + 1} : onChangeTextarea : emit data : [${ui.textarea.value}]`);
@@ -236,19 +249,40 @@ function getParentOrChild() { // for debug
 
 ////////
 // UI
-postmateMidi.ui.registerPlayButton = function(buttonSelector, playButtonFnc, isRemovePlayButtonAtTonejsStartRunning) {
+function registerPlayButton(buttonSelector, playButtonFnc, isRemovePlayButtonAtTonejsStartRunning) {
   const ui = postmateMidi.ui;
   ui.button = document.querySelector(buttonSelector);
   ui.button.onclick = function() {
     postmateMidi.tonejs.initTonejsByUserAction();
+    console.log(`${getParentOrChild()} : onclick playButton`);
+    linkPlayButton();
     playButtonFnc();
   };
+  ui.playButtonFnc = playButtonFnc; // linkPlayButton用
   ui.checkRemovePlayButton = () => {
     // iPadでplayボタンを押さないと音が鳴らない問題の対策に関連して、playボタンを押してさらにTone.jsが問題なくrunningしたあとはplayボタンをremoveしてわかりやすくする用
     if (!isRemovePlayButtonAtTonejsStartRunning) return;
     ui.button.remove();
   }
   ui.button.focus(); // pageを開いてspace keyを押すだけでplay開始できる用。開発時に便利。今後は必要に応じて自動focusのon/offを設定可能にするかも検討予定。
+}
+
+// すべてのparentやchildのplayボタンを、postMessage経由で同時に押したことにする用
+function linkPlayButton() {
+  if (isParent) {
+    // childすべてをcallする
+    for (let i = 0; i < postmateMidi.children.length; i++) {
+      postmateMidi.children[i].call('onClickPlayButton');
+    }
+  } else {
+    postmateMidi.parent.emit('onClickPlayButton' + (postmateMidi.childId + 1));
+  }
+}
+
+function onClickPlayButton() {
+  if (postmateMidi.ui.playButtonFnc) {
+    postmateMidi.ui.playButtonFnc();
+  }
 }
 
 function setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc) {
@@ -298,7 +332,6 @@ function isSmartPhone() {
 }
 
 // 用途、synth用。synthはoutputが音であるが、同時に可視化もして、状況把握しやすく使いやすくする用。
-postmateMidi.ui.visualizeCurrentSound = visualizeCurrentSound;
 function visualizeCurrentSound() {
   const analyser = new Tone.Analyser("waveform", 256);
   Tone.Master.connect(analyser);
@@ -347,11 +380,12 @@ function visualizeCurrentSound() {
 
 //////////
 // MIDI
-postmateMidi.seq.registerSeq = (sq) => {
+function registerSeq(sq) {
   postmateMidi.seq = sq;
   postmateMidi.seq.sendMidiMessage = sendMidiMessage;       // 外部sq側から使う用
   postmateMidi.seq.initOnStartPlaying = initOnStartPlaying; // 〃
   postmateMidi.seq.isIpad = isIpad;                         // 〃
+  postmateMidi.seq.isSmartPhone = isSmartPhone;             // 〃
   postmateMidi.seq.isSynthReady = isSynthReady;             // 〃
   postmateMidi.seq.isAllSynthReady = isAllSynthReady;       // 〃
 }
@@ -446,7 +480,7 @@ function getMidiEventName(i) { // for debug
 // 用途、各種Tone.js系synth js（以下synth js）のコードのうち共通部分をここに集約することで、synth jsの実装をシンプルにする。
 //  必要に応じてsynth js側でそれらを上書きしてよい。
 //  注意、ただしnote onと、セットとなるnote offだけは、synth js側で実装必須とする。そうしないとsynth jsソースだけ見たとき鳴らし方がわからず、ソースが読みづらいため。
-postmateMidi.tonejs.initTonejsByUserAction = () => {
+function initTonejsByUserAction() {
   if (postmateMidi.tonejs.isStartTone) return;
     // ↑ 備忘、if (Tone.context.state === "running") return; だと、ここでは用途にマッチしない。LiveServerのライブリロード後は常時runningになるため。
   startTonejs();
@@ -534,7 +568,7 @@ function checkAllSynthReadyParent() {
   return true;
 }
 
-postmateMidi.tonejs.initBaseTimeStampAudioContext = () => {
+function initBaseTimeStampAudioContext() {
   // Bassのヨレ、和音の構成音ごとの発音タイミングズレ、を防止するため、seq側は演奏予定時刻を指定してpostmate-midiにわたす。postmate-midiはそれを加工してTone.jsにわたす。
   //  流れは：
   //   postmateMidiが受信したmidimessageは：

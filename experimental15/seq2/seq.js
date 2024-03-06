@@ -20,6 +20,7 @@ seq.getTemplates = () => {
 seq.togglePlay = () => {
   seq.isPlaying = !seq.isPlaying;
   if (seq.isPlaying) {
+    console.log(`seq : togglePlay (${location.pathname})`);
     init();
     seqPlay();
   } else {
