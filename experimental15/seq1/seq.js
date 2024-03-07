@@ -36,6 +36,7 @@ seq.setupByData = (data) => {
 }
 
 seq.startPlayJson = (data) => {
+  console.log(`seq : startPlayJson (${location.pathname})`);
   seq.setupByData(data);
   init();
   seq.isPlaying = true;

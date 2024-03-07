@@ -68,9 +68,19 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         console.log(`parent : onCompleteHandshakeChild : from ${childName} : received data : [${data}]`);
         isCompleteHandshake = true;
       });
-      child.on('onChangeChildTextarea' + (childId + 1), data => {
-        console.log(`parent : onChangeChildTextarea : from ${childName} : received data : [${data}]`);
-        ui.textarea.value = data;
+      child.on('onChangeTextarea' + (childId + 1), data => {
+        console.log(`parent : onChangeTextarea : from ${childName} : received data : [${data}]`);
+        // textareaのlink用。例えば child1-seq, child2-seq がそれぞれ個別のtextareaを持ち、片方を変更したときは、両方のseqを同時play開始する用。
+        // parentのぶん
+        if (textareaSeqFnc) textareaSeqFnc(ui.textarea.value);
+        // このchild以外のすべてのchildのぶん ※このchildに送信すると無限loopになってしまうはず
+        for (let i = 0; i < postmateMidi.children.length; i++) {
+          if (i == childId) continue;
+          postmateMidi.children[i].call('onChangeAnyTextarea');
+        }
+
+        // childからparentにtextarea内容を反映する用途のとき用。その用途はpostmate-midiとしてはほぼない考え。ひとまずコメントアウトしておく。また、もし必要になったら別のeventに切り出す考え。
+        // ui.textarea.value = data;
       });
       child.on('onClickPlayButton' + (childId + 1), data => {
         console.log(`parent : onClickPlayButton : from ${childName}`);
@@ -102,41 +112,24 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         // child1～n がrecvしたMIDImessageを、一度ここparentに集約したのち、振り分けてMIDIoutする
         sendMidiMessageFromDevice(data[0], data[1], /*deviceId=*/childId + 1);
       });
-      // childとの双方向通信のtest用
-      if (textareaSelector) {
-        ui.textarea = document.querySelector(textareaSelector);
-        ui.textarea.addEventListener("input", onChangeTextarea);
-        if (textareaTemplateDropDownListSelector) {
-          setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc);
-        }
 
-        function onChangeTextarea() {
-          if (textareaSeqFnc) {
-            textareaSeqFnc(ui.textarea.value);
-          } else {
-            console.log(`parent : onChangeTextarea : call data : [${ui.textarea.value}]`);
-            child.call('onChangeParentTextarea', ui.textarea.value);
-          }
-        }
-      }
+      // 備忘、ここでは textareaSelector から textareaSeqFnc への接続をしない。なぜならここはchildごとの処理なので、child1,child2,...でそれぞれui.textareaを同じ内容で上書きしていくのはムダなので。
 
       postmateMidi.children[childId] = child;
     });
   }
 
-  if (!urls.length) {
-    // isStandalone
-    if (textareaSelector) {
-      ui.textarea = document.querySelector(textareaSelector);
-      ui.textarea.addEventListener("input", onChangeTextarea);
-      if (textareaTemplateDropDownListSelector) {
-        setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc);
-      }
+  // parentにtextareaがある場合用 & standalone用
+  if (textareaSelector) {
+    ui.textarea = document.querySelector(textareaSelector);
+    ui.textarea.addEventListener("input", onChangeTextarea);
+    if (textareaTemplateDropDownListSelector) {
+      setupDropDownListForTextareaTemplate(textareaTemplateDropDownListSelector, textareaTemplatesFnc, onChangeTextarea, setupSeqByTextareaFnc);
+    }
 
-      function onChangeTextarea() {
-        if (textareaSeqFnc) {
-          textareaSeqFnc(ui.textarea.value);
-        }
+    function onChangeTextarea() {
+      if (textareaSeqFnc) {
+        textareaSeqFnc(ui.textarea.value);
       }
     }
   }
@@ -194,7 +187,7 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
     // Expose your model to the Parent. Property values may be functions, promises, or regular values
     height: () => document.height || document.body.offsetHeight,
     onCompleteHandshakeParent,
-    onChangeParentTextarea,
+    onChangeAnyTextarea,
     onClickPlayButton,
     onStartPlaying,
     onAllSynthReady,
@@ -205,7 +198,6 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
     console.log(`child${childId + 1} : handshake is complete`);
     parent.emit('onCompleteHandshakeChild' + (childId + 1), `"Hello, World!" by child${childId + 1}`);
 
-    // parentとの双方向通信のtest用
     if (textareaSelector) {
       ui.textarea = document.querySelector(textareaSelector);
       ui.textarea.addEventListener("input", onChangeTextarea);
@@ -217,10 +209,14 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
         if (textareaSeqFnc) {
           console.log(`child${childId + 1} : onChangeTextarea : textareaSeqFnc`);
           textareaSeqFnc(ui.textarea.value);
-        } else {
-          console.log(`child${childId + 1} : onChangeTextarea : emit data : [${ui.textarea.value}]`);
-          parent.emit('onChangeChildTextarea' + (childId + 1), ui.textarea.value);
         }
+
+        console.log(`child${childId + 1} : onChangeTextarea`);
+        parent.emit('onChangeTextarea' + (childId + 1));
+
+        // childからparentにtextarea内容を反映する用途のとき用。その用途はpostmate-midiとしてはほぼない考え。ひとまずコメントアウトしておく。
+        // console.log(`child${childId + 1} : onChangeTextarea : emit data : [${ui.textarea.value}]`);
+        // parent.emit('onChangeChildTextarea' + (childId + 1), ui.textarea.value);
       }
     }
 
@@ -236,9 +232,13 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
     console.log(`child${childId + 1} : onAllSynthReady`);
     postmateMidi.isAllSynthReady = true;
   }
-  function onChangeParentTextarea(data) {
-    console.log(`child${childId + 1} : onChangeParentTextarea : received data : [${data}]`);
-    ui.textarea.value = data;
+  function onChangeAnyTextarea(data) {
+    // textareaのlink用。例えば child1-seq, child2-seq がそれぞれ個別のtextareaを持ち、片方を変更したときは、両方のseqを同時play開始する用。
+    console.log(`child${childId + 1} : onChangeAnyTextarea`);
+    if (textareaSeqFnc) {
+      console.log(`child${childId + 1} : onChangeAnyTextarea : textareaSeqFnc`);
+      textareaSeqFnc(ui.textarea.value);
+    }
   }
 }
 
