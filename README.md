@@ -118,6 +118,11 @@
 - Postmate + Tone.js + 疑似MIDImessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
 - seq + synth。seqがchildで、synthもchildの場合のサンプルです。
 
+## Experimental15
+- [Demo Experimental15 開発中](https://cat2151.github.io/easy-web-midi-sequencer-template/experimental15/)
+- Postmate + Tone.js + 疑似MIDImessage + 簡易Seq で鳴ることの確認用。シンプルにとどめます。もしこれ以上機能追加する場合は別dirに切り分けて実施します。
+- seq1 + seq2 + synth。複数のseqを同時に鳴らすサンプルです。
+
 ## 当projectが目指すこと
 - `MIDI OUT` する
 - webpageを開くだけで演奏開始する
