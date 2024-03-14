@@ -149,7 +149,7 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         if (nameArr[0] == '' && Number.isInteger(index) && index >= 1) {
           ids[index] = getOutputIds(midiOutput[property])
         } else {
-          alert(property);
+          alert(`ERROR : getMidiOutputIds : property = [${property}]`);
         }
       }
       // console.log(`ids: ${ids}`);
@@ -172,7 +172,7 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         if (nameArr[0] == '' && Number.isInteger(outputId) && outputId >= 1) {
           return outputId;
         }
-        alert(deviceName);
+        alert(`ERROR : getOutputId : deviceName = [${deviceName}]`);
       }
     }
   }
@@ -279,6 +279,7 @@ function linkPlayButton() {
   }
 }
 
+// すべてのparentやchildのplayボタンを、postMessage経由で同時に押したことにする用
 function onClickPlayButton() {
   if (postmateMidi.ui.playButtonFnc) {
     postmateMidi.ui.playButtonFnc();
