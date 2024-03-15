@@ -1,7 +1,7 @@
 // usage : parent.js / child.js を参照ください
 const postmateMidi = {
   registerParent,
-  children: [], isStartTone: [], // parentのみが保持するもの
+  children: [], isStartTone: [], isCompleteHandshakeAllChildren: false, // parentのみが保持するもの
   registerChild,
   parent: null, childId: null,   // childのみが保持するもの
   midiOutputIds: [],
@@ -9,7 +9,9 @@ const postmateMidi = {
   ui: { registerPlayButton, isIpad, isSmartPhone, visualizeCurrentSound },
   seq: { registerSeq }, // register時、seqそのものが外部sqに上書きされる
   isAllSynthReady: false, // 名前が紛らわしいが、seqが持つfncとは別。parentとchildそれぞれが保持する変数。seqが持つfncは外部からこれにアクセスする用のアクセサ。
-  tonejs: { isStartTone: false, synth: null, initBaseTimeStampAudioContext, baseTimeStampAudioContext: 0, initTonejsByUserAction } };
+  tonejs: { isStartTone: false, synth: null, initBaseTimeStampAudioContext, baseTimeStampAudioContext: 0, initTonejsByUserAction,
+      generator: { registerGenerator } // register時、generatorそのものが外部gnに上書きされる
+    } };
 
 let isParent = false; // ひとまず非公開、postmateMidiをシンプルにする優先
 let isChild  = false;
@@ -36,6 +38,12 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         }
       }
       /*sleep*/await new Promise(resolve => setTimeout(resolve, 100)); // 次のchildとのhandshakeを成功させる用。handshake成功のちさらにwaitが必要、でないと次のhandshakeがエラーとなることが多かった。16msecだとエラーになることがあった。
+    }
+
+    postmateMidi.isCompleteHandshakeAllChildren = true;
+    console.log(`${getParentOrChild()} : handshake complete all children`);
+    for (let i = 0; i < postmateMidi.children.length; i++) {
+      postmateMidi.children[i].call('onCompleteHandshakeAllChildren');
     }
   })();
 
@@ -112,6 +120,11 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         // child1～n がrecvしたMIDImessageを、一度ここparentに集約したのち、振り分けてMIDIoutする
         sendMidiMessageFromDevice(data[0], data[1], /*deviceId=*/childId + 1);
       });
+      child.on('sendToSampler' + (childId + 1), data => { // sendToSampler1 ～ : child1からcallされた場合は、sendToSampler1 となる。意味は、わかりづらいが sendToSampler from child1 である。
+        console.log(`parent : sendToSampler : from ${childName} : received data : [`, data, `]`);
+        // child1～n がgenerateした wav を、一度ここparentに集約したのち、振り分けて sendToSampler する
+        sendToSamplerFromDevice(data, /*deviceId=*/childId + 1);
+      });
 
       // 備忘、ここでは textareaSelector から textareaSeqFnc への接続をしない。なぜならここはchildごとの処理なので、child1,child2,...でそれぞれui.textareaを同じ内容で上書きしていくのはムダなので。
 
@@ -187,11 +200,13 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
     // Expose your model to the Parent. Property values may be functions, promises, or regular values
     height: () => document.height || document.body.offsetHeight,
     onCompleteHandshakeParent,
+    onCompleteHandshakeAllChildren,
     onChangeAnyTextarea,
     onClickPlayButton,
     onStartPlaying,
     onAllSynthReady,
-    onmidimessage
+    onmidimessage,
+    sendToSampler
   });
 
   handshake.then(parent => {
@@ -227,6 +242,12 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
   // parentからcallされる
   function onCompleteHandshakeParent(data) {
     console.log(`child${childId + 1} : onCompleteHandshakeParent : received data : [${data}]`);
+  }
+  function onCompleteHandshakeAllChildren(data) {
+    console.log(`child${childId + 1} : onCompleteHandshakeAllChildren : received data : [${data}]`);
+
+    // generator用
+    sendWavAfterHandshakeAllChildren();
   }
   function onAllSynthReady() {
     console.log(`child${childId + 1} : onAllSynthReady`);
@@ -626,6 +647,54 @@ function initCh(ch) {
       }
     }
   };
+}
+
+////////
+// Tone Generator
+//  wav format : Float32Array
+function registerGenerator(gn) {
+  console.log(`${getParentOrChild()} : gn : `, gn);
+  postmateMidi.tonejs.generator = gn; // register時、generatorそのものが外部gnに上書きされる
+}
+
+// child用
+function sendWavAfterHandshakeAllChildren() {
+  const gn = postmateMidi.tonejs.generator;
+  if (gn.isSent) return;
+  if (!gn.createWav) return;
+  if (!gn.wav) {
+    gn.wav = gn.createWav();
+  }
+  if (!postmateMidi.parent) return;
+  if (!isChild) return; // 備忘、parentは送受信の対象外にしておく、シンプル優先
+  console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildren`);
+  postmateMidi.parent.emit('sendToSampler' + (postmateMidi.childId + 1), gn.wav);
+}
+
+// parent用
+function sendToSamplerFromDevice(data, deviceId) {
+  if (!postmateMidi.isCompleteHandshakeAllChildren) {
+    console.log(`${getParentOrChild()} : children : ${postmateMidi.children}`);
+    return;
+  }
+  postmateMidi.sendToSamplerIds = [[], [], [3], []]; // TODO XXX index.htmlに書いて、URLで渡して、postmateMidi.sendToSamplerIds に保持する
+  for (let i = 0; i < postmateMidi.sendToSamplerIds[deviceId].length; i++) {
+    const outputId = postmateMidi.sendToSamplerIds[deviceId][i];
+    if (!outputId) {
+      sendToSampler(data);
+    } else {
+      const childId = outputId - 1;
+      postmateMidi.children[childId].call('sendToSampler', data);
+    }
+  }
+}
+
+function sendToSampler(data) {
+  console.log(`${getParentOrChild()} : received : ` , data);
+  const ch = 1-1;     // TODO XXX sampler-child.jsから指定できるようにする
+  const noteNum = 60; // TODO XXX sampler-child.jsから指定できるようにする
+  postmateMidi.ch[ch].synth.add(noteNum, Tone.Buffer.fromArray(data));
+  console.log(`${getParentOrChild()} : wav added to sampler`);
 }
 
 /////////////////////////

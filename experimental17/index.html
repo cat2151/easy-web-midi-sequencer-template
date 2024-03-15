@@ -12,6 +12,7 @@
       const url = `${baseUrl}?query=${urlParams}`;
       const button = document.querySelector(selector);
       button.onclick = () => { window.location.href = url };
+      button.focus();
     }
   </script>
   <button id="button1">seq → sampler<br>generator → sampler</button><br>
