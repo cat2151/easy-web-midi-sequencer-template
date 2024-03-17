@@ -18,6 +18,7 @@ let isChild  = false;
 
 function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTemplateDropDownListSelector, textareaTemplatesFnc, setupSeqByTextareaFnc) {
   isParent = true;
+  console.log(`${getParentOrChild()} : registerParent start : time : ${Date.now() % 10000}`)
   const ui = postmateMidi.ui;
   const urls = urlParams.urls;
   postmateMidi.midiOutputIds = getMidiOutputIds(urlParams.midiOutput);
@@ -42,7 +43,7 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
     }
 
     postmateMidi.isCompleteHandshakeAllChildren = true;
-    console.log(`${getParentOrChild()} : handshake complete all children`);
+    console.log(`${getParentOrChild()} : handshake complete all children : time : ${Date.now() % 10000}`);
     for (let i = 0; i < postmateMidi.children.length; i++) {
       postmateMidi.children[i].call('onCompleteHandshakeAllChildren');
     }
@@ -245,7 +246,7 @@ function registerChild(urlParams, textareaSelector, textareaSeqFnc, textareaTemp
     console.log(`child${childId + 1} : onCompleteHandshakeParent : received data : [${data}]`);
   }
   function onCompleteHandshakeAllChildren(data) {
-    console.log(`child${childId + 1} : onCompleteHandshakeAllChildren : received data : [${data}]`);
+    console.log(`child${childId + 1} : onCompleteHandshakeAllChildren : received data : [${data}] : time : ${Date.now() % 10000}`);
 
     // generator用
     sendWavAfterHandshakeAllChildren();
@@ -668,7 +669,7 @@ function sendWavAfterHandshakeAllChildren() {
   }
   if (!postmateMidi.parent) return;
   if (!isChild) return; // 備忘、parentは送受信の対象外にしておく、シンプル優先
-  console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildren`);
+  console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildren : time : ${Date.now() % 10000}`);
   postmateMidi.parent.emit('sendToSampler' + (postmateMidi.childId + 1), gn.wav);
 }
 
@@ -690,7 +691,7 @@ function sendToSampler(data) {
   const ch = 1-1;     // TODO XXX sampler-child.jsから指定できるようにする
   const noteNum = 60; // TODO XXX sampler-child.jsから指定できるようにする
   postmateMidi.ch[ch].synth.add(noteNum, Tone.Buffer.fromArray(data));
-  console.log(`${getParentOrChild()} : wav added to sampler`);
+  console.log(`${getParentOrChild()} : wav added to sampler : time : ${Date.now() % 10000}`);
 }
 
 /////////////////////////
