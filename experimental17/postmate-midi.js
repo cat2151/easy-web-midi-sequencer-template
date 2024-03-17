@@ -4,7 +4,7 @@ const postmateMidi = {
   children: [], isStartTone: [], isCompleteHandshakeAllChildren: false, // parentのみが保持するもの
   registerChild,
   parent: null, childId: null,   // childのみが保持するもの
-  midiOutputIds: [],
+  midiOutputIds: [], sendToSamplerIds: [],
   ch: Array.from({ length: 16 }, () => ({ noteOn: null, noteOff: null, controlChange: [] })),
   ui: { registerPlayButton, isIpad, isSmartPhone, visualizeCurrentSound },
   seq: { registerSeq }, // register時、seqそのものが外部sqに上書きされる
@@ -21,6 +21,7 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
   const ui = postmateMidi.ui;
   const urls = urlParams.urls;
   postmateMidi.midiOutputIds = getMidiOutputIds(urlParams.midiOutput);
+  postmateMidi.sendToSamplerIds = getMidiOutputIds(urlParams.sendToSampler);
   postmateMidi.isStartTone = Array.from({ length: urls.length + 1 }, () => (false));
   let isCompleteHandshake;
   (async () => {
@@ -673,11 +674,6 @@ function sendWavAfterHandshakeAllChildren() {
 
 // parent用
 function sendToSamplerFromDevice(data, deviceId) {
-  if (!postmateMidi.isCompleteHandshakeAllChildren) {
-    console.log(`${getParentOrChild()} : children : ${postmateMidi.children}`);
-    return;
-  }
-  postmateMidi.sendToSamplerIds = [[], [], [3], []]; // TODO XXX index.htmlに書いて、URLで渡して、postmateMidi.sendToSamplerIds に保持する
   for (let i = 0; i < postmateMidi.sendToSamplerIds[deviceId].length; i++) {
     const outputId = postmateMidi.sendToSamplerIds[deviceId][i];
     if (!outputId) {
