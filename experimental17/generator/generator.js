@@ -2,7 +2,7 @@
 
 const gn = { createWav };
 
-function createWav(noteNum = 60, time = 1/*sec*/) {
+function createWav(noteNum = 60, time = 7/*sec メロトロンが最大7秒のワンショット。なお手元環境で演奏開始時のプリレンダリングからsampler add完了まで12msecだった*/) {
   const sampleRate = Tone.context.sampleRate;
   console.log(`generator : sampling rate : ${sampleRate}`);
   const freq = Tone.Midi(noteNum).toFrequency()
