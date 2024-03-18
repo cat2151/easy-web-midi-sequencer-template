@@ -6,6 +6,5 @@ const urlParams = rison2.parse(new URL(window.location.href).searchParams.get('q
 postmateMidi.registerChild(urlParams, null, null, null, null, null);
 postmateMidi.tonejs.generator.registerGenerator(gn);
 
-// TODO generateした波形をvisualizationする。postmateMidiのvisualizationを参考にする想定。
-
+postmateMidi.ui.visualizeGeneratedSound();
 console.log(`postmate-midi child:`, postmateMidi);

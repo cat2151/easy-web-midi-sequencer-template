@@ -6,7 +6,7 @@ const postmateMidi = {
   parent: null, childId: null,   // childのみが保持するもの
   midiOutputIds: [], sendToSamplerIds: [],
   ch: Array.from({ length: 16 }, () => ({ noteOn: null, noteOff: null, controlChange: [] })),
-  ui: { registerPlayButton, isIpad, isSmartPhone, visualizeCurrentSound },
+  ui: { registerPlayButton, isIpad, isSmartPhone, visualizeCurrentSound, visualizeGeneratedSound },
   seq: { registerSeq }, // register時、seqそのものが外部sqに上書きされる
   isAllSynthReady: false, // 名前が紛らわしいが、seqが持つfncとは別。parentとchildそれぞれが保持する変数。seqが持つfncは外部からこれにアクセスする用のアクセサ。
   tonejs: { isStartTone: false, synth: null, initBaseTimeStampAudioContext, baseTimeStampAudioContext: 0, initTonejsByUserAction,
@@ -370,7 +370,7 @@ function visualizeCurrentSound() {
   canvas.addEventListener("click", changeVisualization);
 
   function getInitialInterval() {
-    if (isSmartPhone()) return 5; // AndroidやiPhone用
+    // if (isSmartPhone()) return 5; // AndroidやiPhone用 → 検証した結果、5だとかえって音途切れが増えた、おそらくCPU負荷が下がりすぎた。よってデフォルトは一律60FPSで様子見する
     return 60;                    // PCやiPad用
   }
   function startVisualization() {
@@ -382,7 +382,7 @@ function visualizeCurrentSound() {
       ctx.strokeStyle = "#0f0"; // dark mode / light 両対応を想定
       for (let i = 0; i < waveform.length; i++) {
         const x = (i / waveform.length) * canvas.width;
-        const y = (0.5 * canvas.height) - (waveform[i] * canvas.height * 4); // 多少表示が見切れてもよいので派手に振幅を見せることを優先する用
+        const y = (0.5 * canvas.height) - (waveform[i] * canvas.height * 2); // 多少表示が見切れてもよいので派手に振幅を見せることを優先する用
         ctx.lineTo(x, y);
       }
       ctx.stroke();
@@ -400,6 +400,37 @@ function visualizeCurrentSound() {
       Tone.Transport.start();
     }
   }
+}
+
+// 用途、generator(Tone Generator)用。generatorはoutputが波形データであるが、同時に可視化もして、状況把握しやすく使いやすくする用。
+function visualizeGeneratedSound() {
+  const canvas = document.createElement("canvas");
+  canvas.width = window.innerWidth;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+
+  // オシロスコープ
+  let eventId = Tone.Transport.scheduleRepeat(() => {
+    const gn = postmateMidi.tonejs.generator;
+    if (!gn.wav) return; // wavが生成されるまでは、描画しない
+    const waveform = gn.wav.slice(0, 256);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.strokeStyle = "#0f0"; // dark mode / light 両対応を想定
+    for (let i = 0; i < waveform.length; i++) {
+      const x = (i / waveform.length) * canvas.width;
+      const y = (0.5 * canvas.height) - (waveform[i] * canvas.height);
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 一度描画したら描画をとめる
+    // console.log(`${getParentOrChild()} : visualizeGeneratedSound : stopped`)
+    Tone.Transport.clear(eventId);
+  }, "60hz");
+
+  // 定期的に、wav生成済みかチェックし、wav生成完了していたら一度だけ描画する
+  Tone.Transport.start();
 }
 
 //////////
@@ -665,12 +696,13 @@ function sendWavAfterHandshakeAllChildren() {
   if (gn.isSent) return;
   if (!gn.createWav) return;
   if (!gn.wav) {
-    gn.wav = gn.createWav();
+    gn.noteNum = 60;
+    gn.wav = gn.createWav(gn.noteNum);
   }
   if (!postmateMidi.parent) return;
   if (!isChild) return; // 備忘、parentは送受信の対象外にしておく、シンプル優先
   console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildren : time : ${Date.now() % 10000}`);
-  postmateMidi.parent.emit('sendToSampler' + (postmateMidi.childId + 1), gn.wav);
+  postmateMidi.parent.emit('sendToSampler' + (postmateMidi.childId + 1), [gn.noteNum, gn.wav]);
 }
 
 // parent用
@@ -688,9 +720,13 @@ function sendToSamplerFromDevice(data, deviceId) {
 
 function sendToSampler(data) {
   console.log(`${getParentOrChild()} : received : ` , data);
-  const ch = 1-1;     // TODO XXX sampler-child.jsから指定できるようにする
-  const noteNum = 60; // TODO XXX sampler-child.jsから指定できるようにする
-  postmateMidi.ch[ch].synth.add(noteNum, Tone.Buffer.fromArray(data));
+  const noteNum = data[0];
+  const wav = data[1];
+  for (let ch = 1-1; ch < 16; ch++) {
+    if (postmateMidi.ch[ch].synth) {
+      postmateMidi.ch[ch].synth.add(noteNum, Tone.Buffer.fromArray(wav));
+    }
+  }
   console.log(`${getParentOrChild()} : wav added to sampler : time : ${Date.now() % 10000}`);
 }
 
