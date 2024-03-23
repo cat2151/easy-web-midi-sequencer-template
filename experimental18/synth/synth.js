@@ -1,27 +1,24 @@
 // import * as Tone from 'tone'; // コメントアウトする。index.htmlでTone.jsをsrcする。そうしないとバンドラーを使わない別projectにおいてソースをそのまま利用できず不便だったので。
 
-const gn = { createWav, setupPreRenderer };
+const gn = { setupTonejsPreRenderer };
 
-function createWav(noteNum = 60, time = 7/*sec メロトロンが最大7秒のワンショット。なお手元環境で演奏開始時のプリレンダリングからsampler add完了まで12msecだった*/) {
-  const sampleRate = Tone.context.sampleRate;
-  console.log(`generator : sampling rate : ${sampleRate}`);
-  const freq = Tone.Midi(noteNum).toFrequency()
-  const twoPiFreqPerSampleRate = 2 * Math.PI * freq / sampleRate
-  let wav = new Float32Array(sampleRate * time);
-  for (let i = 0; i < wav.length; i++) {
-    wav[i] = 0.5 * Math.sin(i * twoPiFreqPerSampleRate);
-  }
-  console.log(`generator : wav : `, wav);
-  return wav;
-}
-
-function setupPreRenderer(context) {
-  const synth = new Tone.PolySynth({ context, volume: -12 }).toDestination();
+function setupTonejsPreRenderer(context) {
+  const synth = new Tone.PolySynth({ context, volume: -6 });
   synth.set({
     oscillator: {type: "sawtooth"},
-    envelope: {attack: 0.8, decay: 0.8}
+    envelope: {attack: 0.1, decay: 0.8}
   });
-  synth.triggerAttackRelease(["C4","E4","G4","B4"], 7);
+  const filter = new Tone.Filter({context, type: "bandpass", frequency: 2400, Q: 5});
+  const freqEnv = new Tone.FrequencyEnvelope({context, attack: 0.2, decay: 0.4, baseFrequency: "C3", octaves: 4 });
+  const phaser = new Tone.Phaser({context, frequency: 0.09});
+  const distortion = new Tone.Distortion({context, distortion: 5});
+
+  freqEnv.connect(filter.frequency);
+  synth.chain(filter, phaser, distortion, context.destination);
+
+  // seq for prerender
+  freqEnv.triggerAttack();
+  synth.triggerAttackRelease(["C4","C3","G5"], 7);
 }
 
 export { gn };

@@ -413,7 +413,8 @@ function visualizeGeneratedSound() {
   let eventId = Tone.Transport.scheduleRepeat(() => {
     const gn = postmateMidi.tonejs.generator;
     if (!gn.wav) return; // wavが生成されるまでは、描画しない
-    const waveform = gn.wav.slice(0, 256);
+    const pos = gn.wav.length / 2;
+    const waveform = gn.wav.slice(pos, pos + 256); // slow attackの波形で0が表示される、のを防止する用
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
     ctx.strokeStyle = "#0f0"; // dark mode / light 両対応を想定
@@ -694,14 +695,38 @@ function registerGenerator(gn) {
 function sendWavAfterHandshakeAllChildren() {
   const gn = postmateMidi.tonejs.generator;
   if (gn.isSent) return;
-  if (!gn.createWav) return;
-  if (!gn.wav) {
-    gn.noteNum = 60;
-    gn.wav = gn.createWav(gn.noteNum);
+
+  if (gn.setupTonejsPreRenderer) {
+    const ch = 1;
+    const bufferSec = 7;
+    const offlineContext = new Tone.OfflineContext(ch, bufferSec, 48000);
+    gn.setupTonejsPreRenderer(offlineContext);
+    renderContextAsync(gn, offlineContext);
+    return;
   }
+  if (gn.createWav) {
+    if (!gn.wav) {
+      gn.noteNum = 60;
+      gn.wav = gn.createWav(gn.noteNum);
+    }
+    sendWavAfterHandshakeAllChildrenSub(gn);
+    return;
+  }
+}
+
+async function renderContextAsync(gn, context) {
+  const startTime = Date.now();
+  gn.noteNum = 60;
+  gn.wav = await context.render();
+  gn.wav = gn.wav.toArray();
+  console.log(`${getParentOrChild()} : preRendering completed : ${Date.now() - startTime}msec`);
+  sendWavAfterHandshakeAllChildrenSub(gn);
+}
+
+function sendWavAfterHandshakeAllChildrenSub(gn) {
   if (!postmateMidi.parent) return;
   if (!isChild) return; // 備忘、parentは送受信の対象外にしておく、シンプル優先
-  console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildren : time : ${Date.now() % 10000}`);
+  console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildrenSub : time : ${Date.now() % 10000}`);
   postmateMidi.parent.emit('sendToSampler' + (postmateMidi.childId + 1), [gn.noteNum, gn.wav]);
 }
 
