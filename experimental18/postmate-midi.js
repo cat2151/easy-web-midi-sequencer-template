@@ -699,7 +699,7 @@ function sendWavAfterHandshakeAllChildren() {
   if (gn.setupTonejsPreRenderer) {
     const ch = 1;
     const bufferSec = 7;
-    const offlineContext = new Tone.OfflineContext(ch, bufferSec, 48000);
+    const offlineContext = new Tone.OfflineContext(ch, bufferSec, Tone.getContext().sampleRate); // 48000決め打ちだとiPadで再生pitchが下がってしまったので対策用
     gn.setupTonejsPreRenderer(offlineContext);
     renderContextAsync(gn, offlineContext);
     return;
