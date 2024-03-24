@@ -123,7 +123,8 @@ function registerParent(urlParams, textareaSelector, textareaSeqFnc, textareaTem
         sendMidiMessageFromDevice(data[0], data[1], /*deviceId=*/childId + 1);
       });
       child.on('sendToSampler' + (childId + 1), data => { // sendToSampler1 ～ : child1からcallされた場合は、sendToSampler1 となる。意味は、わかりづらいが sendToSampler from child1 である。
-        console.log(`parent : sendToSampler : from ${childName} : received data : [`, data, `]`);
+        // console.log(`parent : sendToSampler : from ${childName} : received data : [`, data, `]`);
+        console.log(`parent : sendToSampler : from ${childName}`); // iPad chrome inspect のログが波形データで埋め尽くされて調査できない、のを防止する用
         // child1～n がgenerateした wav を、一度ここparentに集約したのち、振り分けて sendToSampler する
         sendToSamplerFromDevice(data, /*deviceId=*/childId + 1);
       });
@@ -700,6 +701,7 @@ function sendWavAfterHandshakeAllChildren() {
     const ch = 1;
     const bufferSec = 7;
     const offlineContext = new Tone.OfflineContext(ch, bufferSec, Tone.getContext().sampleRate); // 48000決め打ちだとiPadで再生pitchが下がってしまったので対策用
+    console.log(`${getParentOrChild()} : sendWavAfterHandshakeAllChildren : Tone.getContext().sampleRate : ${Tone.getContext().sampleRate}`); // iPadで再生pitchが下がる不具合の調査用
     gn.setupTonejsPreRenderer(offlineContext);
     renderContextAsync(gn, offlineContext);
     return;
@@ -744,7 +746,7 @@ function sendToSamplerFromDevice(data, deviceId) {
 }
 
 function sendToSampler(data) {
-  console.log(`${getParentOrChild()} : received : ` , data);
+  // console.log(`${getParentOrChild()} : received : ` , data); // iPad chrome inspect でログが波形データで埋め尽くされて調査できない、のを防止する用
   const noteNum = data[0];
   const wav = data[1];
   for (let ch = 1-1; ch < 16; ch++) {
